@@ -10,6 +10,5 @@ jdk:
   - oraclejdk8
 os:
   - linux
-  - windows
 script:
-- bash build.sh
+  - bash build.sh
