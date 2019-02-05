@@ -14,6 +14,6 @@ fun main() {
         val command = readLine()?.parseCommand(env)
 
         // Prints result of command execution
-        println(command?.execute()?:"lol")
+        println(command?.execute()?:"")
     }
 }
