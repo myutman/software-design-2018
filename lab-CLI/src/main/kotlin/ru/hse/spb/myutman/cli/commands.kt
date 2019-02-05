@@ -1,8 +1,6 @@
 package ru.hse.spb.myutman.cli
 
-import java.io.File
-import java.io.FileReader
-import java.io.InputStreamReader
+import java.io.*
 import java.util.regex.Pattern
 import kotlin.system.exitProcess
 
@@ -25,17 +23,17 @@ abstract class Command(protected val args: Array<String> = emptyArray(), protect
  */
 class Echo(args: Array<String> = emptyArray()) : Command(args) {
     override fun execute() : String {
-        return args.joinToString(" ") + "\n"
+        return args.joinToString(" ")
     }
 }
 
-private fun fileContents(fileName: String) : String {
-    val reader = FileReader(fileName)
-    return buildString {
-        reader.forEachLine {
-            append(it, "\n")
-        }
-    }
+private fun fileContents(fileName: String): String {
+    return fileContents(FileInputStream(fileName))
+}
+
+private fun fileContents(inputStream: InputStream): String {
+    val reader = InputStreamReader(inputStream)
+    return reader.readLines().joinToString("\n")
 }
 
 /**
@@ -45,11 +43,7 @@ private fun fileContents(fileName: String) : String {
 class Cat(args: Array<String> = emptyArray(), pipe: Command? = null) : Command(args, pipe) {
     override fun execute() : String {
         return if (args.isEmpty()) {
-            pipe ?. execute() ?: buildString {
-                InputStreamReader(System.`in`).forEachLine {
-                    append(it, "\n")
-                }
-            }
+            pipe ?. execute() ?: fileContents(System.`in`)
         } else {
             args.map { fileContents(it) }.joinToString("\n")
         }
@@ -73,24 +67,20 @@ class WC(args: Array<String> = emptyArray(), pipe: Command? = null) : Command(ar
     }
 
     private fun wc(src: String): Result {
-        val pattern = Pattern.compile("\\w")
+        val pattern = Pattern.compile("\\s+")
         return Result(src.length, src.split(pattern).filter { !it.isEmpty() }.size, src.split("\n").size)
     }
 
     override fun execute(): String {
         return if (args.isEmpty()) {
-            wc(pipe ?. execute() ?: buildString {
-                InputStreamReader(System.`in`).forEachLine {
-                    append(it, '\n')
-                }
-            }).toString()
+            wc(pipe ?. execute() ?: fileContents(System.`in`)).toString()
         } else {
             val results = args.map { wc(fileContents(it)) }
             buildString {
                 for ((name, res) in args.zip(results)) {
                     append(res, "\t", name, "\n")
                 }
-                append(results.reduce { acc, result ->  acc + result}, "\tat all\n")
+                append(results.reduce { acc, result ->  acc + result}, "\ttotal")
             }
         }
     }
@@ -141,10 +131,6 @@ class BashCommand(val name: String, args: Array<String>, pipe: Command?) : Comma
             append(name + " " + args.joinToString(" "))
         })
         val commandOutput = runtime.inputStream
-        return buildString {
-            InputStreamReader(commandOutput).forEachLine {
-                append(it + "\n")
-            }
-        }
+        return fileContents(commandOutput)
     }
 }

@@ -9,6 +9,12 @@ import ru.hse.spb.myutman.cli.*
  * @property env dictionary with environment variables
  */
 class CustomCLIParserVisitor(val env: MutableMap<String, String>) : CLIParserBaseVisitor<(Command?) -> Command?>() {
+
+    /**
+     * Visit all pipe separated commands and creates a pipeline of them
+     *
+     * @return lambda that takes command and adds it to the pipeline
+     */
     override fun visitCommands(ctx: CLIParser.CommandsContext?): (Command?) -> Command? {
         return {
             // Put given command as a result
@@ -21,6 +27,11 @@ class CustomCLIParserVisitor(val env: MutableMap<String, String>) : CLIParserBas
         }
     }
 
+    /**
+     * Parses CLI command
+     *
+     * @return lambda to add into pipeline
+     */
     override fun visitCommand(ctx: CLIParser.CommandContext?): (Command?) -> Command? {
         // Gets command name
         val commandName = ctx!!.commandName().text.unquote()
@@ -40,6 +51,11 @@ class CustomCLIParserVisitor(val env: MutableMap<String, String>) : CLIParserBas
         }
     }
 
+    /**
+     * Parses assignation
+     *
+     * @return lambda to add into pipeline
+     */
     override fun visitAssignation(ctx: CLIParser.AssignationContext?): (Command?) -> Command? {
         // Gets key
         val name = ctx!!.IDENTIFIER().text
@@ -52,6 +68,11 @@ class CustomCLIParserVisitor(val env: MutableMap<String, String>) : CLIParserBas
         }
     }
 
+    /**
+     * Parses exit command
+     *
+     * @return lambda to add into pipeline
+     */
     override fun visitExit(ctx: CLIParser.ExitContext?): (Command?) -> Command? {
         return {
             Exit()
