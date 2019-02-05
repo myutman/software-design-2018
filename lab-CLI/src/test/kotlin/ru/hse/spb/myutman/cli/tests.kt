@@ -88,25 +88,65 @@ class SubstitutionTests {
 class CommandTest {
 
     @Test
-    fun testEcho() {
+    fun testShouldWorkEcho() {
         val echo = Echo(arrayOf("kek", "lol", "arbidol"))
         assertEquals("kek lol arbidol", echo.execute())
     }
 
     @Test
-    fun testCat() {
+    fun testShouldWorkCatWithPipe() {
         val cat = Cat(pipe = Echo(arrayOf("kek", "lol", "arbidol")))
         assertEquals("kek lol arbidol", cat.execute())
     }
 
     @Test
-    fun testWC() {
+    fun testShouldWorkCatWithStdin() {
+        setInput("""mama anarhia
+                |
+                |papa
+                |stakan portveina""".trimMargin())
+        val cat = Cat()
+        assertEquals("""mama anarhia
+                |
+                |papa
+                |stakan portveina""".trimMargin(), cat.execute())
+    }
+
+    @Test
+    fun testShouldWorkCatWithArgs() {
+        val cat = Cat(arrayOf("./src/test/resources/test", "./src/test/resources/test"))
+        assertEquals("""mama anarhia
+                |
+                |papa
+                |stakan portveina
+                |mama anarhia
+                |
+                |papa
+                |stakan portveina""".trimMargin(), cat.execute())
+    }
+
+    @Test
+    fun testShouldWorkWCWithPipe() {
+        val wc = WC(pipe = Echo(arrayOf("kek", "lol", "arbidol")))
+        assertEquals("\t1\t3\t15", wc.execute())
+    }
+
+    @Test
+    fun testShouldWorkWCWithStdin() {
         setInput("""mama anarhia
                 |
                 |papa
                 |stakan portveina""".trimMargin())
         val wc = WC()
         assertEquals("\t4\t5\t35", wc.execute())
+    }
+
+    @Test
+    fun testShouldWorkWCWithArgs() {
+        val wc = WC(arrayOf("./src/test/resources/test", "./src/test/resources/test"))
+        assertEquals("""|	4	5	35	./src/test/resources/test
+            |	4	5	35	./src/test/resources/test
+            |	8	10	70	total""".trimMargin(), wc.execute())
     }
 
     @Test
@@ -121,7 +161,7 @@ class CommandTest {
 class ParserTest {
 
     @Test
-    fun testTokens() {
+    fun testShouldBreakIntoLexemes() {
         val lexer = Subst(CharStreams.fromString("\$hello\'\$hello hell\$o\' hell\$o"))
         val actual = buildString {
             for (token in lexer.allTokens) {
@@ -138,7 +178,7 @@ class ParserTest {
     }
 
     @Test
-    fun testCatParse() {
+    fun testShouldParseCat() {
         val command = "cat ./src/test/resources/test".parseCommand(HashMap())
         assertEquals("""mama anarhia
             |
@@ -147,7 +187,7 @@ class ParserTest {
     }
 
     @Test
-    fun testCatParseStdin() {
+    fun testShouldParseCatStdin() {
         setInput("""mama
             |
             |papa""".trimMargin())
@@ -158,22 +198,42 @@ class ParserTest {
     }
 
     @Test
-    fun testWCParse() {
+    fun testShouldParseWC() {
         val command = "wc ./src/test/resources/test".parseCommand(HashMap())
         assertEquals("""|	4	5	35	./src/test/resources/test
                         |	4	5	35	total""".trimMargin(), command?.execute())
     }
 
     @Test
-    fun testAssingParse() {
+    fun testShouldParseAssignment() {
         val dict = HashMap<String, String>()
         "foo=bazz".parseCommand(dict)?.execute()
         assertEquals("bazz", dict["foo"])
     }
 
     @Test
-    fun testPipeParse() {
+    fun testShouldParseExternalCommand() {
+        val command = "head ./src/test/resources/test".parseCommand(HashMap())
+        assertEquals("""mama anarhia
+            |
+            |papa
+            |stakan portveina""".trimMargin(), command?.execute())
+    }
+
+    @Test
+    fun testShouldParsePipe() {
         val command = "cat ./src/test/resources/test | wc".parseCommand(HashMap())
         assertEquals("""|	4	5	35""".trimMargin(), command?.execute())
+    }
+}
+
+class ParserSubstitutionIntegration {
+
+    @Test
+    fun parserShouldSubstitute() {
+        val dict = HashMap<String, String>()
+        dict["foo"] = "\"echo lol\""
+        val command = "\$foo".parseCommand(dict)
+        assertEquals("lol", command?.execute())
     }
 }
