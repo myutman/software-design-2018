@@ -1,8 +1,14 @@
 package ru.hse.spb.myutman.cli
 
-import java.io.*
+import java.io.File
+import java.io.FileInputStream
+import java.io.InputStream
+import java.io.InputStreamReader
 import java.util.regex.Pattern
 import kotlin.system.exitProcess
+
+
+private val defaultMap = mapOf(Pair("PWD", "."))
 
 /**
  * CLI commands superclass.
@@ -10,7 +16,7 @@ import kotlin.system.exitProcess
  * @property args command line arguments
  * @property pipe previous command in pipe
  */
-abstract class Command(protected val args: Array<String> = emptyArray(), protected var pipe: Command? = null) {
+abstract class Command(protected val args: Array<String> = emptyArray(), protected var pipe: Command? = null, protected val dict: Map<String, String> = defaultMap) {
 
     /**
      * Execute CLI command.
@@ -27,8 +33,12 @@ class Echo(args: Array<String> = emptyArray()) : Command(args) {
     }
 }
 
-private fun fileContents(fileName: String): String {
-    return fileContents(FileInputStream(fileName))
+private fun fileContents(fileName: String, dict: Map<String, String>): String {
+    val fileInputStream = if (File(fileName).isAbsolute)
+        FileInputStream(fileName)
+    else
+        FileInputStream(dict["PWD"] + File.separator + fileName)
+    return fileContents(fileInputStream)
 }
 
 private fun fileContents(inputStream: InputStream): String {
@@ -40,12 +50,12 @@ private fun fileContents(inputStream: InputStream): String {
  * Command that consistently prints contents of files listed in its arguments or if there are no any prints contents
  * given by pipe.
  */
-class Cat(args: Array<String> = emptyArray(), pipe: Command? = null) : Command(args, pipe) {
+class Cat(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<String, String> = defaultMap) : Command(args, pipe, dict) {
     override fun execute() : String {
         return if (args.isEmpty()) {
             pipe ?. execute() ?: fileContents(System.`in`)
         } else {
-            args.map { fileContents(it) }.joinToString("\n")
+            args.map { fileContents(it, dict) }.joinToString("\n")
         }
     }
 }
@@ -54,7 +64,7 @@ class Cat(args: Array<String> = emptyArray(), pipe: Command? = null) : Command(a
  * Command that consistently prints number of lines, words and characters in files listed in its arguments or if there
  * are no any prints number of lines, words and characters in contents given by pipe.
  */
-class WC(args: Array<String> = emptyArray(), pipe: Command? = null) : Command(args, pipe) {
+class WC(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<String, String> = defaultMap) : Command(args, pipe, dict) {
 
     private data class Result(val chars: Int, val words: Int, val lines: Int) {
         override fun toString(): String {
@@ -75,7 +85,7 @@ class WC(args: Array<String> = emptyArray(), pipe: Command? = null) : Command(ar
         return if (args.isEmpty()) {
             wc(pipe ?. execute() ?: fileContents(System.`in`)).toString()
         } else {
-            val results = args.map { wc(fileContents(it)) }
+            val results = args.map { wc(fileContents(it, dict)) }
             buildString {
                 for ((name, res) in args.zip(results)) {
                     append(res, "\t", name, "\n")
@@ -90,9 +100,9 @@ class WC(args: Array<String> = emptyArray(), pipe: Command? = null) : Command(ar
 /**
  * Command that prints absolute path of current directory.
  */
-class Pwd : Command() {
+class Pwd(dict: Map<String, String>) : Command(dict = dict) {
     override fun execute(): String {
-        return File(".").absolutePath
+        return dict["PWD"]!!
     }
 
 }
@@ -113,9 +123,9 @@ class Exit : Command() {
  * @property value variable new value
  * @property dict dictionary with environment variables
  */
-class Assignation(val name: String, val value: String, val dict: MutableMap<String, String>) : Command() {
+class Assignation(private val name: String, private val value: String, private val env: MutableMap<String, String>) : Command(dict = env) {
     override fun execute(): String {
-        dict[name] = value
+        env[name] = value
         return ""
     }
 }
@@ -125,7 +135,7 @@ class Assignation(val name: String, val value: String, val dict: MutableMap<Stri
  *
  * @property name name of bash command to execute
  */
-class BashCommand(val name: String, args: Array<String>, pipe: Command?) : Command(args, pipe) {
+class BashCommand(private val name: String, args: Array<String>, pipe: Command?) : Command(args, pipe) {
     override fun execute(): String {
         val runtime = Runtime.getRuntime().exec(buildString {
             append(name + " " + args.joinToString(" "))

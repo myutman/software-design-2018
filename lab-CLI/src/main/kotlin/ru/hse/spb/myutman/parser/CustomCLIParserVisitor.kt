@@ -43,9 +43,9 @@ class CustomCLIParserVisitor(val env: MutableMap<String, String>) : CLIParserBas
             // Switch on different situations of command names and use given Command? as pipe
             when (commandName.unquote()) {
                 "echo"  -> Echo(args)
-                "wc"    -> WC(args, it)
-                "cat"   -> Cat(args, it)
-                "pwd"   -> Pwd()
+                "wc"    -> WC(args, it, env)
+                "cat"   -> Cat(args, it, env)
+                "pwd"   -> Pwd(env)
                 else    -> BashCommand(commandName, args, it)
             }
         }

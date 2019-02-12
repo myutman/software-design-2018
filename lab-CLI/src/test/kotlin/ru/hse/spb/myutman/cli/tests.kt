@@ -6,6 +6,7 @@ import org.junit.Before
 import org.junit.Test
 import ru.hse.spb.myutman.parser.Subst
 import java.io.ByteArrayInputStream
+import java.util.*
 
 private fun setInput(s: String) {
     System.setIn(ByteArrayInputStream(s.toByteArray()))
@@ -18,6 +19,7 @@ class SubstitutionTests {
     @Before
     fun before() {
         env.clear()
+        env["PWD"] = "."
     }
 
     @Test
@@ -87,6 +89,14 @@ class SubstitutionTests {
 
 class CommandTest {
 
+    val env = HashMap<String, String>()
+
+    @Before
+    fun before() {
+        env.clear()
+        env["PWD"] = "."
+    }
+
     @Test
     fun testShouldWorkEcho() {
         val echo = Echo(arrayOf("kek", "lol", "arbidol"))
@@ -151,14 +161,21 @@ class CommandTest {
 
     @Test
     fun testAssignation() {
-        val dict = HashMap<String, String>()
-        val assignation = Assignation("buzz", "foo", dict)
+        val assignation = Assignation("buzz", "foo", env)
         assignation.execute()
-        assertEquals("foo", dict["buzz"])
+        assertEquals("foo", env["buzz"])
     }
 }
 
 class ParserTest {
+
+    val env = HashMap<String, String>()
+
+    @Before
+    fun before() {
+        env.clear()
+        env["PWD"] = "."
+    }
 
     @Test
     fun testShouldBreakIntoLexemes() {
@@ -179,7 +196,7 @@ class ParserTest {
 
     @Test
     fun testShouldParseCat() {
-        val command = "cat ./src/test/resources/test".parseCommand(HashMap())
+        val command = "cat ./src/test/resources/test".parseCommand(env)
         assertEquals("""mama anarhia
             |
             |papa
@@ -191,7 +208,7 @@ class ParserTest {
         setInput("""mama
             |
             |papa""".trimMargin())
-        val command = "cat".parseCommand(HashMap())
+        val command = "cat".parseCommand(env)
         assertEquals("""mama
             |
             |papa""".trimMargin(), command?.execute())
@@ -199,21 +216,20 @@ class ParserTest {
 
     @Test
     fun testShouldParseWC() {
-        val command = "wc ./src/test/resources/test".parseCommand(HashMap())
+        val command = "wc ./src/test/resources/test".parseCommand(env)
         assertEquals("""|	4	5	35	./src/test/resources/test
                         |	4	5	35	total""".trimMargin(), command?.execute())
     }
 
     @Test
     fun testShouldParseAssignment() {
-        val dict = HashMap<String, String>()
-        "foo=bazz".parseCommand(dict)?.execute()
-        assertEquals("bazz", dict["foo"])
+        "foo=bazz".parseCommand(env)?.execute()
+        assertEquals("bazz", env["foo"])
     }
 
     @Test
     fun testShouldParseExternalCommand() {
-        val command = "head ./src/test/resources/test".parseCommand(HashMap())
+        val command = "head ./src/test/resources/test".parseCommand(env)
         assertEquals("""mama anarhia
             |
             |papa
@@ -222,18 +238,25 @@ class ParserTest {
 
     @Test
     fun testShouldParsePipe() {
-        val command = "cat ./src/test/resources/test | wc".parseCommand(HashMap())
+        val command = "cat ./src/test/resources/test | wc".parseCommand(env)
         assertEquals("""|	4	5	35""".trimMargin(), command?.execute())
     }
 }
 
 class ParserSubstitutionIntegration {
 
+    val env = HashMap<String, String>()
+
+    @Before
+    fun before() {
+        env.clear()
+        env["PWD"] = "."
+    }
+
     @Test
     fun parserShouldSubstitute() {
-        val dict = HashMap<String, String>()
-        dict["foo"] = "\"echo lol\""
-        val command = "\$foo".parseCommand(dict)
+        env["foo"] = "\"echo lol\""
+        val command = "\$foo".parseCommand(env)
         assertEquals("lol", command?.execute())
     }
 }
