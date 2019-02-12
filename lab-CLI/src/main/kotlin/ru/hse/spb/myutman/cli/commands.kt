@@ -126,6 +126,13 @@ class Pwd(dict: Map<String, String>) : Command(dict = dict) {
 
 }
 
+/**
+ * Use: grep PATTERN [-i] [-w] [-A n]
+ * Command that prints all lines that match PATTERN
+ * -i: ignore letter case
+ * -w: match whole words
+ * -A n: additionally write n lines after any match
+ */
 class Grep(args: Array<String> = emptyArray(), pipe: Command? = null): Command(args, pipe) {
     override fun execute(): String {
         val lines = (pipe ?. execute() ?: fileContents(System.`in`)).split("\n")

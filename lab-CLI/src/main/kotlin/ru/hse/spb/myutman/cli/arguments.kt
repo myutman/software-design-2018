@@ -3,6 +3,9 @@ package ru.hse.spb.myutman.cli
 import com.xenomachina.argparser.ArgParser
 import com.xenomachina.argparser.default
 
+/**
+ * Class for arguments parsed by ArgParser.
+ */
 class GrepArgs(parser: ArgParser) {
     val pattern by parser.positional(
         "PATTERN",
@@ -20,6 +23,6 @@ class GrepArgs(parser: ArgParser) {
 
     val additionally by parser.storing(
         "-A",
-        help = "additionally write n words after any match"
+        help = "additionally write n lines after any match"
     ) { toInt() }.default(0)
 }
