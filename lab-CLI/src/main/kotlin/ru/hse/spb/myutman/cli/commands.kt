@@ -1,10 +1,9 @@
 package ru.hse.spb.myutman.cli
 
 import com.xenomachina.argparser.ArgParser
-import java.io.File
-import java.io.FileInputStream
-import java.io.InputStream
-import java.io.InputStreamReader
+
+import java.io.*
+
 import java.util.regex.Pattern
 import kotlin.system.exitProcess
 
@@ -22,6 +21,7 @@ abstract class Command(protected val args: Array<String> = emptyArray(), protect
     /**
      * Execute CLI command.
      */
+    @Throws(CLIException::class)
     abstract fun execute() : String
 }
 
@@ -42,6 +42,7 @@ private fun fileContents(fileName: String, dict: Map<String, String>): String {
     return fileContents(fileInputStream)
 }
 
+@Throws(IOException::class)
 private fun fileContents(inputStream: InputStream): String {
     val reader = InputStreamReader(inputStream)
     return reader.readLines().joinToString("\n")
@@ -54,9 +55,17 @@ private fun fileContents(inputStream: InputStream): String {
 class Cat(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<String, String> = defaultMap) : Command(args, pipe, dict) {
     override fun execute() : String {
         return if (args.isEmpty()) {
-            pipe ?. execute() ?: fileContents(System.`in`)
+            try {
+                pipe?.execute() ?: fileContents(System.`in`)
+            } catch (e: IOException) {
+                throw CLIException("cat: ${e.message}")
+            }
         } else {
-            args.map { fileContents(it, dict) }.joinToString("\n")
+            try {
+                args.map { fileContents(it, dict) }.joinToString("\n")
+            } catch (e: IOException) {
+                throw CLIException("cat: ${e.message}")
+            }
         }
     }
 }
@@ -84,14 +93,22 @@ class WC(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<St
 
     override fun execute(): String {
         return if (args.isEmpty()) {
-            wc(pipe ?. execute() ?: fileContents(System.`in`)).toString()
+            try {
+                wc(pipe?.execute() ?: fileContents(System.`in`)).toString()
+            } catch (e: IOException) {
+                throw CLIException("wc: ${e.message}")
+            }
         } else {
-            val results = args.map { wc(fileContents(it, dict)) }
-            buildString {
-                for ((name, res) in args.zip(results)) {
-                    append(res, "\t", name, "\n")
+            try {
+                val results = args.map { wc(fileContents(it, dict)) }
+                buildString {
+                    for ((name, res) in args.zip(results)) {
+                        append(res, "\t", name, "\n")
+                    }
+                    append(results.reduce { acc, result ->  acc + result}, "\ttotal")
                 }
-                append(results.reduce { acc, result ->  acc + result}, "\ttotal")
+            } catch (e: IOException) {
+                throw CLIException("wc: ${e.message}")
             }
         }
     }
@@ -170,6 +187,11 @@ class BashCommand(private val name: String, args: Array<String>, pipe: Command?)
             append(name + " " + args.joinToString(" "))
         })
         val commandOutput = runtime.inputStream
-        return fileContents(commandOutput)
+        try {
+            val res = fileContents(commandOutput)
+            return res
+        } catch (e: IOException) {
+            throw CLIException("$name: ${e.message}")
+        }
     }
 }
