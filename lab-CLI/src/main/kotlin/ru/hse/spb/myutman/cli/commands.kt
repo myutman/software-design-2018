@@ -1,5 +1,6 @@
 package ru.hse.spb.myutman.cli
 
+import com.xenomachina.argparser.ArgParser
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
@@ -105,6 +106,34 @@ class Pwd(dict: Map<String, String>) : Command(dict = dict) {
         return dict["PWD"]!!
     }
 
+}
+
+class Grep(args: Array<String> = emptyArray(), pipe: Command? = null): Command(args, pipe) {
+    override fun execute(): String {
+        val lines = (pipe ?. execute() ?: fileContents(System.`in`)).split("\n")
+        return ArgParser(args).parseInto(::GrepArgs).run {
+            val flags = if (ignore) Pattern.CASE_INSENSITIVE else 0
+            val pat = if (word) {
+                ".*(^|\\s)$pattern(\$|\\s).*"
+            } else {
+                ".*$pattern.*"
+            }
+            val regex = Pattern.compile(pat, flags).toRegex()
+
+            val list = ArrayList<String>()
+            var left = 0
+            for (line in lines) {
+                if (line.matches(regex)) {
+                    list.add(line)
+                    left = additionally
+                } else if (left > 0) {
+                    list.add(line)
+                    left--
+                }
+            }
+            list.joinToString("\n")
+        }
+    }
 }
 
 /**
