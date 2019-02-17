@@ -17,29 +17,31 @@ private val defaultMap = mapOf(Pair("PWD", "."))
  * @property args command line arguments
  * @property pipe previous command in pipe
  */
-abstract class Command(protected val args: Array<String> = emptyArray(), protected var pipe: Command? = null, protected val dict: Map<String, String> = defaultMap) {
+abstract class Command(
+    protected val args: Array<String> = emptyArray(),
+    protected var pipe: Command? = null,
+    protected val dict: Map<String, String> = defaultMap
+) {
 
     /**
      * Execute CLI command.
      */
     @Throws(CLIException::class)
-    abstract fun execute() : String
+    abstract fun execute(): String
 }
 
 /**
  * Command that prints its arguments.
  */
 class Echo(args: Array<String> = emptyArray()) : Command(args) {
-    override fun execute() : String {
+    override fun execute(): String {
         return args.joinToString(" ")
     }
 }
 
 private fun fileContents(fileName: String, dict: Map<String, String>): String {
-    val fileInputStream = if (File(fileName).isAbsolute)
-        FileInputStream(fileName)
-    else
-        FileInputStream(dict["PWD"] + File.separator + fileName)
+    val file = File(getFullPath(fileName, dict))
+    val fileInputStream = FileInputStream(file)
     return fileContents(fileInputStream)
 }
 
@@ -53,8 +55,9 @@ private fun fileContents(inputStream: InputStream): String {
  * Command that consistently prints contents of files listed in its arguments or if there are no any prints contents
  * given by pipe.
  */
-class Cat(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<String, String> = defaultMap) : Command(args, pipe, dict) {
-    override fun execute() : String {
+class Cat(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<String, String> = defaultMap) :
+    Command(args, pipe, dict) {
+    override fun execute(): String {
         return if (args.isEmpty()) {
             try {
                 pipe?.execute() ?: fileContents(System.`in`)
@@ -75,14 +78,15 @@ class Cat(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<S
  * Command that consistently prints number of lines, words and characters in files listed in its arguments or if there
  * are no any prints number of lines, words and characters in contents given by pipe.
  */
-class WC(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<String, String> = defaultMap) : Command(args, pipe, dict) {
+class WC(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<String, String> = defaultMap) :
+    Command(args, pipe, dict) {
 
     private data class Result(val chars: Int, val words: Int, val lines: Int) {
         override fun toString(): String {
             return "\t$lines\t$words\t$chars"
         }
 
-        operator fun plus (other: Result): Result{
+        operator fun plus(other: Result): Result {
             return Result(chars + other.chars, words + other.words, lines + other.lines)
         }
     }
@@ -106,7 +110,7 @@ class WC(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<St
                     for ((name, res) in args.zip(results)) {
                         append(res, "\t", name, "\n")
                     }
-                    append(results.reduce { acc, result ->  acc + result}, "\ttotal")
+                    append(results.reduce { acc, result -> acc + result }, "\ttotal")
                 }
             } catch (e: IOException) {
                 throw CLIException("wc: ${e.message}")
@@ -133,9 +137,9 @@ class Pwd(dict: Map<String, String>) : Command(dict = dict) {
  * -w: match whole words
  * -A n: additionally write n lines after any match
  */
-class Grep(args: Array<String> = emptyArray(), pipe: Command? = null): Command(args, pipe) {
+class Grep(args: Array<String> = emptyArray(), pipe: Command? = null) : Command(args, pipe) {
     override fun execute(): String {
-        val lines = (pipe ?. execute() ?: fileContents(System.`in`)).split("\n")
+        val lines = (pipe?.execute() ?: fileContents(System.`in`)).split("\n")
         try {
             return ArgParser(args).parseInto(::GrepArgs).run {
                 val flags = if (ignore) Pattern.CASE_INSENSITIVE else 0
@@ -183,10 +187,81 @@ class Exit : Command() {
  * @property value variable new value
  * @property dict dictionary with environment variables
  */
-class Assignation(private val name: String, private val value: String, private val env: MutableMap<String, String>) : Command(dict = env) {
+class Assignation(private val name: String, private val value: String, private val env: MutableMap<String, String>) :
+    Command(dict = env) {
     override fun execute(): String {
         env[name] = value
         return ""
+    }
+}
+
+
+class Ls(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<String, String> = defaultMap) :
+    Command(args, pipe, dict) {
+    override fun execute(): String {
+        return if (args.isEmpty()) {
+            try {
+                val res = pipe?.execute() ?: ""
+                if (res == "") {
+                    lsDir(dict["PWD"] ?: ".")
+                } else {
+                    lsDir(res)
+                }
+            } catch (e: IOException) {
+                throw CLIException("ls: ${e.message}")
+            }
+        } else {
+            try {
+                if (args.size == 1) {
+                    return lsDir(args[0])
+                }
+                val stringBuilder = StringBuilder()
+                for (arg in args) {
+                    stringBuilder.append(" $arg:\n${lsDir(getFullPath(arg, dict))}")
+                }
+                stringBuilder.toString()
+            } catch (e: IOException) {
+                throw CLIException("ls: ${e.message}")
+            }
+        }
+    }
+
+    private fun lsDir(dirName: String): String {
+        val dir = File(dirName)
+        if (dir.exists() && dir.isDirectory) {
+            val stringBuilder = StringBuilder()
+            for (file in dir.listFiles()) {
+                if (file.isDirectory) {
+                    stringBuilder.append("dir: ${file.name}\n")
+                } else {
+                    stringBuilder.append("file: ${file.name}\n")
+                }
+            }
+            return stringBuilder.toString()
+        } else {
+            throw CLIException("ls: There is no such directory")
+        }
+    }
+}
+
+class Cd(args: Array<String> = emptyArray(), private val env: MutableMap<String, String> = mutableMapOf()) :
+    Command(args, null, env) {
+    override fun execute(): String {
+        if (args.isEmpty()) {
+            throw CLIException("cd: Less than 1 argument given")
+        } else if (args.size > 1) {
+            throw CLIException("cd: More than 1 argument given")
+        }
+        val dir = args[0]
+        val newPwd = getFullPath(dir, env)
+        println(newPwd)
+        val file = File(newPwd)
+        if (file.exists() && file.isDirectory) {
+            env["PWD"] = newPwd
+            return ""
+        } else {
+            throw CLIException("cd: There is no such directory")
+        }
     }
 }
 
@@ -207,5 +282,15 @@ class BashCommand(private val name: String, args: Array<String>, pipe: Command?)
         } catch (e: IOException) {
             throw CLIException("$name: ${e.message}")
         }
+    }
+}
+
+fun getFullPath(fileName: String, env: Map<String, String>): String {
+    return if (fileName[0] == '/') {
+        fileName
+    } else if (fileName[0] == '.') {
+        env["PWD"] + fileName.substring(1)
+    } else {
+        env["PWD"] + File.separator + fileName
     }
 }

@@ -7,6 +7,7 @@ import org.junit.Before
 import org.junit.Test
 import ru.hse.spb.myutman.parser.Subst
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.util.*
 
 private fun setInput(s: String) {
@@ -131,6 +132,83 @@ class CommandTest {
                 |papa
                 |stakan portveina
                 |mama anarhia
+                |
+                |papa
+                |stakan portveina""".trimMargin(), cat.execute())
+    }
+
+    @Test
+    fun testShouldWorkLsWithOneArg() {
+        val ls = Ls(arrayOf("./src/test"), null, env)
+        assertEquals("""dir: kotlin
+                |dir: resources
+                |""".trimMargin(), ls.execute())
+    }
+
+    @Test
+    fun testShouldWorkLsWithPipe() {
+        val ls = Ls(emptyArray(), Echo(arrayOf("./src/test")), env)
+        assertEquals("""dir: kotlin
+                |dir: resources
+                |""".trimMargin(), ls.execute())
+    }
+
+    @Test
+    fun testShouldWorkLsWithArgs() {
+        val ls = Ls(arrayOf("./src/test", "./src/test/resources"), null, env)
+        assertEquals(""" ./src/test:
+                |dir: kotlin
+                |dir: resources
+                | ./src/test/resources:
+                |file: test
+                |""".trimMargin(), ls.execute())
+    }
+
+
+    @Test
+    fun testCdPoint() {
+        val root = env["PWD"]
+        val cd = Cd(arrayOf("./src/test"), env)
+        assertEquals("", cd.execute())
+        assertEquals("$root/src/test", env["PWD"])
+    }
+
+    @Test
+    fun testCdSlash() {
+        val root = env["PWD"]
+        val cd = Cd(arrayOf("$root/src/test"), env)
+        assertEquals("", cd.execute())
+        assertEquals("$root/src/test", env["PWD"])
+    }
+
+    @Test
+    fun testCdWord() {
+        val root = env["PWD"]
+        val cd = Cd(arrayOf("src/test"), env)
+        assertEquals("", cd.execute())
+        assertEquals("$root/src/test", env["PWD"])
+    }
+
+    @Test
+    fun testCdLs() {
+        val root = env["PWD"]
+        val cd = Cd(arrayOf("src/test"), env)
+        assertEquals("", cd.execute())
+        assertEquals("$root/src/test", env["PWD"])
+        val ls = Ls(emptyArray(), null, env)
+        assertEquals("""dir: kotlin
+                |dir: resources
+                |""".trimMargin(), ls.execute())
+    }
+
+    @Test
+    fun testCdCat() {
+        val root = env["PWD"]
+        val cd = Cd(arrayOf("src/test"), env)
+        assertEquals("", cd.execute())
+        assertEquals("$root/src/test", env["PWD"])
+        val cat = Cat(arrayOf("resources/test"), null, env)
+        assertEquals("""mama anarhia
                 |
                 |papa
                 |stakan portveina""".trimMargin(), cat.execute())
