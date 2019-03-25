@@ -8,7 +8,7 @@ fun main() {
 
     // Gets external environment variables
     val env = HashMap(System.getenv())
-    env["PWD"] = File(".").absolutePath
+    env["PWD"] = File("").absolutePath
 
     while (true) {
         // Prints command line tag

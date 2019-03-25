@@ -21,7 +21,7 @@ class SubstitutionTests {
     @Before
     fun before() {
         env.clear()
-        env["PWD"] = "."
+        env["PWD"] = File("").absolutePath
     }
 
     @Test
@@ -96,7 +96,7 @@ class CommandTest {
     @Before
     fun before() {
         env.clear()
-        env["PWD"] = "."
+        env["PWD"] = File("").absolutePath
     }
 
     @Test
@@ -174,6 +174,31 @@ class CommandTest {
     }
 
     @Test
+    fun testCdStrange() {
+        val root = env["PWD"]
+        val cd = Cd(arrayOf("./src/test/../.."), env)
+        assertEquals("", cd.execute())
+        assertEquals(root, env["PWD"])
+    }
+
+    @Test
+    fun testCdJustPoint() {
+        val root = env["PWD"]
+        val cd = Cd(arrayOf("."), env)
+        assertEquals("", cd.execute())
+        assertEquals(root, env["PWD"])
+    }
+
+    @Test
+    fun testCdBack() {
+        val root = env["PWD"]
+        Cd(arrayOf("./src/test"), env).execute()
+        val cd = Cd(arrayOf(".."), env)
+        assertEquals("", cd.execute())
+        assertEquals("$root/src", env["PWD"])
+    }
+
+    @Test
     fun testCdSlash() {
         val root = env["PWD"]
         val cd = Cd(arrayOf("$root/src/test"), env)
@@ -203,6 +228,7 @@ class CommandTest {
 
     @Test
     fun testCdCat() {
+        println(File(".").absolutePath)
         val root = env["PWD"]
         val cd = Cd(arrayOf("src/test"), env)
         assertEquals("", cd.execute())
@@ -322,12 +348,12 @@ class ParserTest {
                 append(token.text, " ", token.startIndex, " ", token.stopIndex, " ", when(token.type) {
                     Subst.SUBST -> "SUBST"
                     else -> "QUOTE"
-                }, "\n")
+                }, System.lineSeparator())
             }
         }
-        val expected = "\$hello 0 5 SUBST\n" +
-                "'\$hello hell\$o' 6 20 QUOTE\n" +
-                "\$o 26 27 SUBST\n"
+        val expected = "\$hello 0 5 SUBST${System.lineSeparator()}" +
+                "'\$hello hell\$o' 6 20 QUOTE${System.lineSeparator()}" +
+                "\$o 26 27 SUBST${System.lineSeparator()}"
         assertEquals(expected, actual)
     }
 
@@ -467,7 +493,7 @@ class ParserSubstitutionIntegration {
     @Before
     fun before() {
         env.clear()
-        env["PWD"] = "."
+        env["PWD"] = File("").absolutePath
     }
 
     @Test

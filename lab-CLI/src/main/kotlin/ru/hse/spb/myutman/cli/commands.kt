@@ -4,6 +4,7 @@ import com.xenomachina.argparser.ArgParser
 import com.xenomachina.argparser.MissingRequiredPositionalArgumentException
 
 import java.io.*
+import java.nio.file.Paths
 
 import java.util.regex.Pattern
 import kotlin.system.exitProcess
@@ -67,7 +68,7 @@ class Cat(args: Array<String> = emptyArray(),
             }
         } else {
             try {
-                args.map { fileContents(it, dict) }.joinToString("\n")
+                args.map { fileContents(it, dict) }.joinToString(System.lineSeparator())
             } catch (e: IOException) {
                 throw CLIException("cat: ${e.message}")
             }
@@ -114,7 +115,7 @@ class WC(args: Array<String> = emptyArray(),
                 val results = args.map { wc(fileContents(it, dict)) }
                 buildString {
                     for ((name, res) in args.zip(results)) {
-                        append(res, "\t", name, "\n")
+                        append(res, "\t", name, System.lineSeparator())
                     }
                     append(results.reduce { acc, result -> acc + result }, "\ttotal")
                 }
@@ -145,7 +146,7 @@ class Pwd(dict: Map<String, String>) : Command(dict = dict) {
  */
 class Grep(args: Array<String> = emptyArray(), pipe: Command? = null) : Command(args, pipe) {
     override fun execute(): String {
-        val lines = (pipe?.execute() ?: fileContents(System.`in`)).split("\n")
+        val lines = (pipe?.execute() ?: fileContents(System.`in`)).split(System.lineSeparator())
         try {
             return ArgParser(args).parseInto(::GrepArgs).run {
                 val flags = if (ignore) Pattern.CASE_INSENSITIVE else 0
@@ -167,7 +168,7 @@ class Grep(args: Array<String> = emptyArray(), pipe: Command? = null) : Command(
                         left--
                     }
                 }
-                list.joinToString("\n")
+                list.joinToString(System.lineSeparator())
             }
         } catch (e: MissingRequiredPositionalArgumentException) {
             throw CLIException("grep: ${e.message}")
@@ -213,22 +214,23 @@ class Ls(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<St
         return if (args.isEmpty()) {
             try {
                 val res = pipe?.execute() ?: ""
-                if (res == "") {
-                    lsDir(dict["PWD"] ?: ".")
+                val path = if (res == "") {
+                    dict["PWD"] ?: "."
                 } else {
-                    lsDir(res)
+                    res
                 }
+                lsDir(getFullPath(path, dict))
             } catch (e: IOException) {
                 throw CLIException("ls: ${e.message}")
             }
         } else {
             try {
                 if (args.size == 1) {
-                    return lsDir(args[0])
+                    return lsDir(getFullPath(args[0], dict))
                 }
                 val stringBuilder = StringBuilder()
                 for (arg in args) {
-                    stringBuilder.append(" $arg:\n${lsDir(getFullPath(arg, dict))}")
+                    stringBuilder.append(" $arg:${System.lineSeparator()}${lsDir(getFullPath(arg, dict))}")
                 }
                 stringBuilder.toString()
             } catch (e: IOException) {
@@ -239,13 +241,14 @@ class Ls(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<St
 
     private fun lsDir(dirName: String): String {
         val dir = File(dirName)
+        println(dir)
         if (dir.exists() && dir.isDirectory) {
             val stringBuilder = StringBuilder()
             for (file in dir.listFiles()) {
                 if (file.isDirectory) {
-                    stringBuilder.append("dir: ${file.name}\n")
+                    stringBuilder.append("dir: ${file.name}${System.lineSeparator()}")
                 } else {
-                    stringBuilder.append("file: ${file.name}\n")
+                    stringBuilder.append("file: ${file.name}${System.lineSeparator()}")
                 }
             }
             return stringBuilder.toString()
@@ -265,7 +268,6 @@ class Cd(args: Array<String> = emptyArray(), private val env: MutableMap<String,
         }
         val dir = args[0]
         val newPwd = getFullPath(dir, env)
-        println(newPwd)
         val file = File(newPwd)
         if (file.exists() && file.isDirectory) {
             env["PWD"] = newPwd
@@ -283,13 +285,13 @@ class Cd(args: Array<String> = emptyArray(), private val env: MutableMap<String,
  */
 class BashCommand(private val name: String,
                   args: Array<String>,
-                  pipe: Command?)
-    : Command(args, pipe) {
+                  env: MutableMap<String, String>)
+    : Command(args, null, env) {
 
     override fun execute(): String {
         val runtime = Runtime.getRuntime().exec(buildString {
             append(name + " " + args.joinToString(" "))
-        })
+        }, emptyArray(), File(dict["PWD"]))
         val commandOutput = runtime.inputStream
         try {
             val res = fileContents(commandOutput)
@@ -301,11 +303,5 @@ class BashCommand(private val name: String,
 }
 
 fun getFullPath(fileName: String, env: Map<String, String>): String {
-    return if (fileName[0] == '/') {
-        fileName
-    } else if (fileName[0] == '.') {
-        env["PWD"] + fileName.substring(1)
-    } else {
-        env["PWD"] + File.separator + fileName
-    }
+    return Paths.get(env["PWD"]).resolve(fileName).normalize().toString()
 }

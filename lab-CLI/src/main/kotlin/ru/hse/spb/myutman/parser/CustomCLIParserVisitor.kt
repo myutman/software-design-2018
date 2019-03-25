@@ -49,7 +49,7 @@ class CustomCLIParserVisitor(val env: MutableMap<String, String>) : CLIParserBas
                 "grep"  -> Grep(args, it)
                 "ls"    -> Ls(args, it, env)
                 "cd"    -> Cd(args, env)
-                else    -> BashCommand(commandName, args, it)
+                else    -> BashCommand(commandName, args, env)
             }
         }
     }
