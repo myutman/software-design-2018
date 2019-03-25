@@ -241,7 +241,6 @@ class Ls(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<St
 
     private fun lsDir(dirName: String): String {
         val dir = File(dirName)
-        println(dir)
         if (dir.exists() && dir.isDirectory) {
             val stringBuilder = StringBuilder()
             for (file in dir.listFiles()) {
@@ -261,12 +260,10 @@ class Ls(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<St
 class Cd(args: Array<String> = emptyArray(), private val env: MutableMap<String, String> = mutableMapOf()) :
     Command(args, null, env) {
     override fun execute(): String {
-        if (args.isEmpty()) {
-            throw CLIException("cd: Less than 1 argument given")
-        } else if (args.size > 1) {
+        if (args.size > 1) {
             throw CLIException("cd: More than 1 argument given")
         }
-        val dir = args[0]
+        val dir = if (args.isEmpty()) System.getProperty("user.home") else args[0]
         val newPwd = getFullPath(dir, env)
         val file = File(newPwd)
         if (file.exists() && file.isDirectory) {

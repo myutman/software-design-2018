@@ -207,6 +207,13 @@ class CommandTest {
     }
 
     @Test
+    fun testCdEmpty() {
+        val cd = Cd(emptyArray(), env)
+        assertEquals("", cd.execute())
+        assertEquals(System.getProperty("user.home"), env["PWD"])
+    }
+
+    @Test
     fun testCdWord() {
         val root = env["PWD"]
         val cd = Cd(arrayOf("src/test"), env)
@@ -228,7 +235,6 @@ class CommandTest {
 
     @Test
     fun testCdCat() {
-        println(File(".").absolutePath)
         val root = env["PWD"]
         val cd = Cd(arrayOf("src/test"), env)
         assertEquals("", cd.execute())
