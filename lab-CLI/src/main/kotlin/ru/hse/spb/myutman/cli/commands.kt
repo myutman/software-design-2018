@@ -17,11 +17,9 @@ private val defaultMap = mapOf(Pair("PWD", "."))
  * @property args command line arguments
  * @property pipe previous command in pipe
  */
-abstract class Command(
-    protected val args: Array<String> = emptyArray(),
-    protected var pipe: Command? = null,
-    protected val dict: Map<String, String> = defaultMap
-) {
+abstract class Command(protected val args: Array<String> = emptyArray(),
+                       protected var pipe: Command? = null,
+                       protected val dict: Map<String, String> = defaultMap) {
 
     /**
      * Execute CLI command.
@@ -48,16 +46,19 @@ private fun fileContents(fileName: String, dict: Map<String, String>): String {
 @Throws(IOException::class)
 private fun fileContents(inputStream: InputStream): String {
     val reader = InputStreamReader(inputStream)
-    return reader.readLines().joinToString("\n")
+    return reader.readLines().joinToString(System.lineSeparator())
 }
 
 /**
  * Command that consistently prints contents of files listed in its arguments or if there are no any prints contents
  * given by pipe.
  */
-class Cat(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<String, String> = defaultMap) :
-    Command(args, pipe, dict) {
-    override fun execute(): String {
+class Cat(args: Array<String> = emptyArray(),
+          pipe: Command? = null,
+          dict: Map<String, String> = defaultMap)
+    : Command(args, pipe, dict) {
+
+    override fun execute() : String {
         return if (args.isEmpty()) {
             try {
                 pipe?.execute() ?: fileContents(System.`in`)
@@ -78,8 +79,10 @@ class Cat(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<S
  * Command that consistently prints number of lines, words and characters in files listed in its arguments or if there
  * are no any prints number of lines, words and characters in contents given by pipe.
  */
-class WC(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<String, String> = defaultMap) :
-    Command(args, pipe, dict) {
+class WC(args: Array<String> = emptyArray(),
+         pipe: Command? = null,
+         dict: Map<String, String> = defaultMap)
+    : Command(args, pipe, dict) {
 
     private data class Result(val chars: Int, val words: Int, val lines: Int) {
         override fun toString(): String {
@@ -93,7 +96,10 @@ class WC(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<St
 
     private fun wc(src: String): Result {
         val pattern = Pattern.compile("\\s+")
-        return Result(src.length, src.split(pattern).filter { !it.isEmpty() }.size, src.split("\n").size)
+        return Result(src.length,
+            src.split(pattern).filter { !it.isEmpty() }.size,
+            src.split(System.lineSeparator()).size
+        )
     }
 
     override fun execute(): String {
@@ -187,10 +193,15 @@ class Exit : Command() {
  * @property value variable new value
  * @property dict dictionary with environment variables
  */
-class Assignation(private val name: String, private val value: String, private val env: MutableMap<String, String>) :
-    Command(dict = env) {
+class Assignation(private val name: String,
+                  private val value: String,
+                  private val env: MutableMap<String, String>)
+    : Command(dict = env) {
+
     override fun execute(): String {
-        env[name] = value
+        if (!name.equals("PWD")) {
+            env[name] = value
+        }
         return ""
     }
 }
@@ -270,7 +281,11 @@ class Cd(args: Array<String> = emptyArray(), private val env: MutableMap<String,
  *
  * @property name name of bash command to execute
  */
-class BashCommand(private val name: String, args: Array<String>, pipe: Command?) : Command(args, pipe) {
+class BashCommand(private val name: String,
+                  args: Array<String>,
+                  pipe: Command?)
+    : Command(args, pipe) {
+
     override fun execute(): String {
         val runtime = Runtime.getRuntime().exec(buildString {
             append(name + " " + args.joinToString(" "))
