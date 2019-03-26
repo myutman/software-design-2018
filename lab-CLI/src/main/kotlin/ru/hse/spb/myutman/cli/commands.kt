@@ -65,7 +65,7 @@ class Cat(args: Array<String> = emptyArray(),
             }
         } else {
             try {
-                args.map { fileContents(it, dict) }.joinToString("\n")
+                args.map { fileContents(it, dict) }.joinToString(System.lineSeparator())
             } catch (e: IOException) {
                 throw CLIException("cat: ${e.message}")
             }
@@ -112,7 +112,7 @@ class WC(args: Array<String> = emptyArray(),
                 val results = args.map { wc(fileContents(it, dict)) }
                 buildString {
                     for ((name, res) in args.zip(results)) {
-                        append(res, "\t", name, "\n")
+                        append(res, "\t", name, System.lineSeparator())
                     }
                     append(results.reduce { acc, result ->  acc + result}, "\ttotal")
                 }
