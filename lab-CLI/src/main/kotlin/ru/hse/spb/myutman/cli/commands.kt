@@ -200,8 +200,10 @@ class Assignation(private val name: String,
     : Command(dict = env) {
 
     override fun execute(): String {
-        if (!name.equals("PWD")) {
+        if (name != "PWD") {
             env[name] = value
+        } else {
+            throw CLIException("You can't change PWD variable value")
         }
         return ""
     }

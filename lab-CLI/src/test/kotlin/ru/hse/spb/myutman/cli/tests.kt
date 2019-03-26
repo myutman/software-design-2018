@@ -16,7 +16,7 @@ private fun setInput(s: String) {
 
 class SubstitutionTests {
 
-    val env = HashMap<String, String>()
+    private val env = HashMap<String, String>()
 
     @Before
     fun before() {
@@ -91,7 +91,9 @@ class SubstitutionTests {
 
 class CommandTest {
 
-    val env = HashMap<String, String>()
+    private val env = HashMap<String, String>()
+    private val testDir = "${File.separator}src${File.separator}test"
+    private val testFile = "src${File.separator}test${File.separator}resources${File.separator}test"
 
     @Before
     fun before() {
@@ -126,7 +128,7 @@ class CommandTest {
 
     @Test
     fun testShouldWorkCatWithArgs() {
-        val cat = Cat(arrayOf("./src/test/resources/test", "./src/test/resources/test"))
+        val cat = Cat(arrayOf(testFile, testFile))
         assertEquals("""mama anarhia
                 |
                 |papa
@@ -139,7 +141,7 @@ class CommandTest {
 
     @Test
     fun testShouldWorkLsWithOneArg() {
-        val ls = Ls(arrayOf("./src/test"), null, env)
+        val ls = Ls(arrayOf(".$testDir"), null, env)
         assertEquals("""dir: kotlin
                 |dir: resources
                 |""".trimMargin(), ls.execute())
@@ -147,7 +149,7 @@ class CommandTest {
 
     @Test
     fun testShouldWorkLsWithPipe() {
-        val ls = Ls(emptyArray(), Echo(arrayOf("./src/test")), env)
+        val ls = Ls(emptyArray(), Echo(arrayOf(".$testDir")), env)
         assertEquals("""dir: kotlin
                 |dir: resources
                 |""".trimMargin(), ls.execute())
@@ -155,11 +157,11 @@ class CommandTest {
 
     @Test
     fun testShouldWorkLsWithArgs() {
-        val ls = Ls(arrayOf("./src/test", "./src/test/resources"), null, env)
-        assertEquals(""" ./src/test:
+        val ls = Ls(arrayOf(".$testDir", ".$testDir${File.separator}resources"), null, env)
+        assertEquals(""" .${File.separator}src${File.separator}test:
                 |dir: kotlin
                 |dir: resources
-                | ./src/test/resources:
+                | .${File.separator}src${File.separator}test${File.separator}resources:
                 |file: test
                 |""".trimMargin(), ls.execute())
     }
@@ -168,15 +170,15 @@ class CommandTest {
     @Test
     fun testCdPoint() {
         val root = env["PWD"]
-        val cd = Cd(arrayOf("./src/test"), env)
+        val cd = Cd(arrayOf(".$testDir"), env)
         assertEquals("", cd.execute())
-        assertEquals("$root/src/test", env["PWD"])
+        assertEquals("$root$testDir", env["PWD"])
     }
 
     @Test
     fun testCdStrange() {
         val root = env["PWD"]
-        val cd = Cd(arrayOf("./src/test/../.."), env)
+        val cd = Cd(arrayOf(".$testDir${File.separator}..${File.separator}.."), env)
         assertEquals("", cd.execute())
         assertEquals(root, env["PWD"])
     }
@@ -192,18 +194,18 @@ class CommandTest {
     @Test
     fun testCdBack() {
         val root = env["PWD"]
-        Cd(arrayOf("./src/test"), env).execute()
+        Cd(arrayOf(".$testDir"), env).execute()
         val cd = Cd(arrayOf(".."), env)
         assertEquals("", cd.execute())
-        assertEquals("$root/src", env["PWD"])
+        assertEquals("$root${File.separator}src", env["PWD"])
     }
 
     @Test
     fun testCdSlash() {
         val root = env["PWD"]
-        val cd = Cd(arrayOf("$root/src/test"), env)
+        val cd = Cd(arrayOf("$root$testDir"), env)
         assertEquals("", cd.execute())
-        assertEquals("$root/src/test", env["PWD"])
+        assertEquals("$root$testDir", env["PWD"])
     }
 
     @Test
@@ -216,17 +218,17 @@ class CommandTest {
     @Test
     fun testCdWord() {
         val root = env["PWD"]
-        val cd = Cd(arrayOf("src/test"), env)
+        val cd = Cd(arrayOf("src${File.separator}test"), env)
         assertEquals("", cd.execute())
-        assertEquals("$root/src/test", env["PWD"])
+        assertEquals("$root$testDir", env["PWD"])
     }
 
     @Test
     fun testCdLs() {
         val root = env["PWD"]
-        val cd = Cd(arrayOf("src/test"), env)
+        val cd = Cd(arrayOf("src${File.separator}test"), env)
         assertEquals("", cd.execute())
-        assertEquals("$root/src/test", env["PWD"])
+        assertEquals("$root$testDir", env["PWD"])
         val ls = Ls(emptyArray(), null, env)
         assertEquals("""dir: kotlin
                 |dir: resources
@@ -236,10 +238,10 @@ class CommandTest {
     @Test
     fun testCdCat() {
         val root = env["PWD"]
-        val cd = Cd(arrayOf("src/test"), env)
+        val cd = Cd(arrayOf("src${File.separator}test"), env)
         assertEquals("", cd.execute())
-        assertEquals("$root/src/test", env["PWD"])
-        val cat = Cat(arrayOf("resources/test"), null, env)
+        assertEquals("$root$testDir", env["PWD"])
+        val cat = Cat(arrayOf("resources${File.separator}test"), null, env)
         assertEquals("""mama anarhia
                 |
                 |papa
@@ -264,9 +266,9 @@ class CommandTest {
 
     @Test
     fun testShouldWorkWCWithArgs() {
-        val wc = WC(arrayOf("./src/test/resources/test", "./src/test/resources/test"))
-        assertEquals("""|	4	5	35	./src/test/resources/test
-            |	4	5	35	./src/test/resources/test
+        val wc = WC(arrayOf(testFile, testFile))
+        assertEquals("""|	4	5	35	$testFile
+            |	4	5	35	$testFile
             |	8	10	70	total""".trimMargin(), wc.execute())
     }
 
@@ -338,7 +340,8 @@ class CommandTest {
 
 class ParserTest {
 
-    val env = HashMap<String, String>()
+    private val env = HashMap<String, String>()
+    private val testFile = "src${File.separator}test${File.separator}resources${File.separator}test"
 
     @Before
     fun before() {
@@ -365,7 +368,7 @@ class ParserTest {
 
     @Test
     fun testShouldParseCat() {
-        val command = "cat ./src/test/resources/test".parseCommand(env)
+        val command = "cat $testFile".parseCommand(env)
         assertEquals("""mama anarhia
             |
             |papa
@@ -385,8 +388,8 @@ class ParserTest {
 
     @Test
     fun testShouldParseWC() {
-        val command = "wc ./src/test/resources/test".parseCommand(env)
-        assertEquals("""|	4	5	35	./src/test/resources/test
+        val command = "wc $testFile".parseCommand(env)
+        assertEquals("""|	4	5	35	$testFile
                         |	4	5	35	total""".trimMargin(), command?.execute())
     }
 
@@ -398,7 +401,7 @@ class ParserTest {
 
     @Test
     fun testShouldParseExternalCommand() {
-        val command = "head ./src/test/resources/test".parseCommand(env)
+        val command = "head $testFile".parseCommand(env)
         assertEquals("""mama anarhia
             |
             |papa
@@ -407,13 +410,13 @@ class ParserTest {
 
     @Test
     fun testShouldParsePipe() {
-        val command = "cat ./src/test/resources/test | wc".parseCommand(env)
+        val command = "cat $testFile | wc".parseCommand(env)
         assertEquals("""|	4	5	35""".trimMargin(), command?.execute())
     }
 
     @Test
     fun testShouldParseCatPipeGrep() {
-        val command = "cat ./src/test/resources/test | grep na -A 1".parseCommand(env)
+        val command = "cat $testFile | grep na -A 1".parseCommand(env)
         assertEquals("""|mama anarhia
             |
             |stakan portveina""".trimMargin(), command?.execute())
