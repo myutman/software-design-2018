@@ -1,6 +1,10 @@
 package ru.hse.spb.myutman.cli
 
+import com.xenomachina.argparser.ArgParser
+import com.xenomachina.argparser.MissingRequiredPositionalArgumentException
+
 import java.io.*
+
 import java.util.regex.Pattern
 import kotlin.system.exitProcess
 
@@ -132,6 +136,47 @@ class WC(args: Array<String> = emptyArray(),
 class Pwd(dict: Map<String, String>) : Command(dict = dict) {
     override fun execute(): String {
         return dict["PWD"]!!
+    }
+}
+
+/**
+ * Use: grep PATTERN [-i] [-w] [-A n]
+ * Command that prints all lines that match PATTERN
+ * -i: ignore letter case
+ * -w: match whole words
+ * -A n: additionally write n lines after any match
+ */
+class Grep(args: Array<String> = emptyArray(), pipe: Command? = null): Command(args, pipe) {
+    override fun execute(): String {
+        val lines = (pipe ?. execute() ?: fileContents(System.`in`)).split("\n")
+        try {
+            return ArgParser(args).parseInto(::GrepArgs).run {
+                val flags = if (ignore) Pattern.CASE_INSENSITIVE else 0
+                val pat = if (word) {
+                    ".*(^|\\s)$pattern(\$|\\s).*"
+                } else {
+                    ".*$pattern.*"
+                }
+                val regex = Pattern.compile(pat, flags).toRegex()
+
+                val list = ArrayList<String>()
+                var left = 0
+                for (line in lines) {
+                    if (line.matches(regex)) {
+                        list.add(line)
+                        left = additionally
+                    } else if (left > 0) {
+                        list.add(line)
+                        left--
+                    }
+                }
+                list.joinToString("\n")
+            }
+        } catch (e: MissingRequiredPositionalArgumentException) {
+            throw CLIException("grep: ${e.message}")
+        } catch (e: IOException) {
+            throw CLIException("grep: ${e.message}")
+        }
     }
 }
 
