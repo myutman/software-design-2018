@@ -9,6 +9,7 @@ import ru.hse.spb.myutman.parser.Subst
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.PrintWriter
+import java.nio.file.Path
 import java.util.*
 
 private fun setInput(s: String) {

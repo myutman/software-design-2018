@@ -34,10 +34,12 @@ class Echo(args: Array<String> = emptyArray()) : Command(args) {
 }
 
 private fun fileContents(fileName: String, dict: Map<String, String>): String {
-    val fileInputStream = if (File(fileName).isAbsolute)
-        FileInputStream(fileName)
-    else
-        FileInputStream(dict["PWD"] + File.separator + fileName)
+    val fileInputStream = FileInputStream(
+        File(dict["PWD"])
+        .toPath()
+        .resolve(fileName)
+        .toFile()
+    )
     return fileContents(fileInputStream)
 }
 
