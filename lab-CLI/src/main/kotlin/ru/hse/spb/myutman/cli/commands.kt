@@ -87,7 +87,7 @@ class WC(args: Array<String> = emptyArray(),
             return "\t$lines\t$words\t$chars"
         }
 
-        operator fun plus (other: Result): Result{
+        operator fun plus (other: Result): Result {
             return Result(chars + other.chars, words + other.words, lines + other.lines)
         }
     }
@@ -131,7 +131,6 @@ class Pwd(dict: Map<String, String>) : Command(dict = dict) {
     override fun execute(): String {
         return dict["PWD"]!!
     }
-
 }
 
 /**
@@ -174,9 +173,18 @@ class BashCommand(private val name: String,
     : Command(args, pipe) {
 
     override fun execute(): String {
-        val runtime = Runtime.getRuntime().exec(buildString {
-            append(name + " " + args.joinToString(" "))
-        })
+        val runtime: Process
+        try {
+            runtime = Runtime.getRuntime().exec(buildString {
+                append(name + " " + args.joinToString(" "))
+            })
+        } catch (e: IOException) {
+            throw CLIException("$name: ${e.message}")
+        }
+        val code = runtime.waitFor()
+        if (code != 0) {
+            throw CLIException("$name: Invalid command");
+        }
         val commandOutput = runtime.inputStream
         try {
             val res = fileContents(commandOutput)

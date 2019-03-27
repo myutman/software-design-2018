@@ -4,7 +4,6 @@ import org.antlr.v4.runtime.CharStreams
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
-import org.junit.BeforeClass
 import org.junit.Test
 import ru.hse.spb.myutman.parser.Subst
 import java.io.ByteArrayInputStream
@@ -16,20 +15,27 @@ private fun setInput(s: String) {
     System.setIn(ByteArrayInputStream(s.toByteArray()))
 }
 
+val filename = "./src/test/resources/test".replace('/', File.separatorChar);
+val stringInFile = "mama anarhia" + System.lineSeparator() +
+        "" + System.lineSeparator() +
+        "papa" + System.lineSeparator() +
+        "stakan portveina"
+val wcAns = "\t4\t5\t${stringInFile.length}"
+val wcTotal = wcAns + "\t" + filename + System.lineSeparator() +
+        wcAns + "\t" + filename + System.lineSeparator() +
+        "\t8\t10\t${stringInFile.length * 2}\ttotal"
+
 class SubstitutionTests {
 
     val env = HashMap<String, String>()
-    val filename = "./src/test/resources/test".replace('/', File.separatorChar);
-    val stringInFile = """mama anarhia
-        |
-        |papa
-        |stakan portveina""".trimMargin()
 
     @Before
     fun before() {
         env.clear()
         env["PWD"] = "."
-        val writer = PrintWriter(File(filename))
+        val file = File(filename)
+        File(file.parent).mkdirs()
+        val writer = PrintWriter(file)
         writer.print(stringInFile)
         writer.close()
     }
@@ -107,24 +113,21 @@ class SubstitutionTests {
 class CommandTest {
 
     val env = HashMap<String, String>()
-    val filename = "./src/test/resources/test".replace('/', File.separatorChar);
-    val stringInFile = """mama anarhia
-        |
-        |papa
-        |stakan portveina""".trimMargin()
 
     @Before
     fun before() {
         env.clear()
         env["PWD"] = "."
-        val writer = PrintWriter(File(filename))
+        val file = File(filename)
+        File(file.parent).mkdirs()
+        val writer = PrintWriter(file)
         writer.print(stringInFile)
         writer.close()
     }
 
     @After
     fun after() {
-        File(filename).delete()
+        //File(filename).delete()
     }
 
     @Test
@@ -141,22 +144,15 @@ class CommandTest {
 
     @Test
     fun testShouldWorkCatWithStdin() {
-        setInput(stringInFile.trimMargin())
+        setInput(stringInFile)
         val cat = Cat()
-        assertEquals(stringInFile, cat.execute())
+        assertEquals(stringInFile.trim(), cat.execute().trim())
     }
 
     @Test
     fun testShouldWorkCatWithArgs() {
         val cat = Cat(arrayOf(filename, filename))
-        assertEquals("""mama anarhia
-                |
-                |papa
-                |stakan portveina
-                |mama anarhia
-                |
-                |papa
-                |stakan portveina""".trimMargin(), cat.execute())
+        assertEquals(stringInFile + System.lineSeparator() + stringInFile, cat.execute())
     }
 
     @Test
@@ -169,15 +165,13 @@ class CommandTest {
     fun testShouldWorkWCWithStdin() {
         setInput(stringInFile)
         val wc = WC()
-        assertEquals("\t4\t5\t35", wc.execute())
+        assertEquals(wcAns, wc.execute())
     }
 
     @Test
     fun testShouldWorkWCWithArgs() {
         val wc = WC(arrayOf(filename, filename))
-        assertEquals("""|	4	5	35	${filename}
-            |	4	5	35	${filename}
-            |	8	10	70	total""".trimMargin(), wc.execute())
+        assertEquals(wcTotal, wc.execute())
     }
 
     @Test
@@ -191,17 +185,14 @@ class CommandTest {
 class ParserTest {
 
     val env = HashMap<String, String>()
-    val filename = "./src/test/resources/test".replace('/', File.separatorChar);
-    val stringInFile = """mama anarhia
-        |
-        |papa
-        |stakan portveina""".trimMargin()
 
     @Before
     fun before() {
         env.clear()
         env["PWD"] = "."
-        val writer = PrintWriter(File(filename))
+        val file = File(filename)
+        File(file.parent).mkdirs()
+        val writer = PrintWriter(file)
         writer.print(stringInFile)
         writer.close()
     }
@@ -236,20 +227,19 @@ class ParserTest {
 
     @Test
     fun testShouldParseCatStdin() {
-        setInput("""mama
-            |
-            |papa""".trimMargin())
+        val str = "mama" + System.lineSeparator() +
+                "" + System.lineSeparator() +
+                "papa"
+        setInput(str)
         val command = "cat".parseCommand(env)
-        assertEquals("""mama
-            |
-            |papa""".trimMargin(), command?.execute())
+        assertEquals(str, command?.execute())
     }
 
     @Test
     fun testShouldParseWC() {
         val command = "wc $filename".parseCommand(env)
-        assertEquals("""|	4	5	35	$filename
-                        |	4	5	35	total""".trimMargin(), command?.execute())
+        assertEquals(wcAns + "\t" + filename + System.lineSeparator() +
+                    wcAns + "\ttotal", command?.execute())
     }
 
     @Test
@@ -259,15 +249,18 @@ class ParserTest {
     }
 
     @Test
-    fun testShouldParseExternalCommand() {
-        val command = "head $filename".parseCommand(env)
-        assertEquals(stringInFile, command?.execute())
+    fun testShouldParseExternalLinuxCommand() {
+        try {
+            val command = "head $filename".parseCommand(env)
+            assertEquals(stringInFile, command?.execute())
+        } catch (ignore: CLIException) {
+        }
     }
 
     @Test
     fun testShouldParsePipe() {
         val command = "cat $filename | wc".parseCommand(env)
-        assertEquals("""|	4	5	35""".trimMargin(), command?.execute())
+        assertEquals(wcAns, command?.execute())
     }
 }
 
@@ -283,8 +276,8 @@ class ParserSubstitutionIntegration {
 
     @Test
     fun parserShouldSubstitute() {
-        env["foo"] = "\"echo lol\""
-        val command = "\$foo".parseCommand(env)
+        env["foo"] = "\"echo\""
+        val command = "\$foo lol".parseCommand(env)
         assertEquals("lol", command?.execute())
     }
 }
