@@ -1,6 +1,5 @@
 package ru.hse.spb.myutman.cli
 
-import java.io.File
 import java.io.IOException
 import kotlin.system.exitProcess
 
@@ -8,7 +7,6 @@ fun main() {
 
     // Gets external environment variables
     val env = HashMap(System.getenv())
-    env["PWD"] = File(".").absolutePath
 
     while (true) {
         // Prints command line tag
