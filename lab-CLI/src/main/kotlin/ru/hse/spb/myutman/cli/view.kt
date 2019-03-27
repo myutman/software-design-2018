@@ -15,12 +15,11 @@ fun main() {
         print("hi there!$ ")
         System.out.flush()
 
+        // Reads CLI command and parses it into ru.hse.spb.myutman.cli.Command instance
         val command: Command?
         try {
-            // Reads CLI command and parses it into ru.hse.spb.myutman.cli.Command instance
             command = readLine()?.parseCommand(env)
         } catch (e: IOException) {
-            // Exits if there were EOF
             exitProcess(0)
         }
 

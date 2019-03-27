@@ -1,8 +1,8 @@
 package ru.hse.spb.myutman.cli
 
-import com.xenomachina.argparser.ArgParser
 import org.antlr.v4.runtime.CharStreams
-import org.junit.Assert.*
+import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import ru.hse.spb.myutman.parser.Subst
@@ -181,64 +181,6 @@ class CommandTest {
         assignation.execute()
         assertEquals("foo", env["buzz"])
     }
-
-    @Test
-    fun testShouldMatchWithoutArgs() {
-        setInput("""|lol
-            |lollipop
-            |Lol""".trimMargin())
-        val grep = Grep(arrayOf("lol"))
-        assertEquals("""|lol
-            |lollipop""".trimMargin(), grep.execute())
-    }
-
-    @Test
-    fun testShouldMatchWholeWord() {
-        setInput("""|lol
-            |lollipop
-            |Lol""".trimMargin())
-        val grep = Grep(arrayOf("lol", "-w"))
-        assertEquals("lol", grep.execute())
-    }
-
-    @Test
-    fun testShouldMatchIgnoringCase() {
-        setInput("""|lol
-            |lollipop
-            |Lol""".trimMargin())
-        val grep = Grep(arrayOf("lol", "-i"))
-        assertEquals("""|lol
-            |lollipop
-            |Lol""".trimMargin(), grep.execute())
-    }
-
-    @Test
-    fun testShouldWriteAdditionalLines() {
-        setInput("""|lol
-            |kek
-            |lollipop
-            |Lol""".trimMargin())
-        val grep = Grep(arrayOf("lol", "-wiA", "1"))
-        assertEquals("""|lol
-            |kek
-            |Lol""".trimMargin(), grep.execute())
-    }
-
-    @Test
-    fun testShouldSupportRegex() {
-        setInput("""|1. first
-            |still first
-            |
-            |2. second
-            |13.
-            |thirteenth
-            |
-        """.trimMargin())
-        val grep = Grep(arrayOf("[0-9]+\\."))
-        assertEquals("""|1. first
-            |2. second
-            |13.""".trimMargin(), grep.execute())
-    }
 }
 
 class ParserTest {
@@ -320,86 +262,6 @@ class ParserTest {
     fun testShouldParsePipe() {
         val command = "cat $filename | wc".parseCommand(env)
         assertEquals(wcAns, command?.execute())
-    }
-
-    @Test
-    fun testShouldParseCatPipeGrep() {
-        val command = "cat ./src/test/resources/test | grep na -A 1".parseCommand(env)
-        assertEquals("""|mama anarhia
-            |
-            |stakan portveina""".trimMargin(), command?.execute())
-    }
-
-    @Test
-    fun testShouldSupportParsingRegex() {
-        setInput("""|1. first
-            |still first
-            |
-            |2. second
-            |13.
-            |thirteenth
-            |
-        """.trimMargin())
-        val grep = "grep \"[0-9]+\\.\"".parseCommand(env)
-        assertEquals("""|1. first
-            |2. second
-            |13.""".trimMargin(), grep?.execute())
-    }
-
-    @Test
-    fun testShouldParseGrepPattern() {
-        val args = arrayOf("lol", "-wA", "5", "-i")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertEquals("lol", pattern)
-        }
-    }
-
-    @Test
-    fun testShouldParseGrepWord() {
-        val args = arrayOf("lol", "-wA", "5", "-i")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertTrue(word)
-        }
-    }
-
-    @Test
-    fun testShouldNotParseGrepWord() {
-        val args = arrayOf("lol", "-A", "5", "-i")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertFalse(word)
-        }
-    }
-
-    @Test
-    fun testShouldParseGrepIgnore() {
-        val args = arrayOf("lol", "-wA", "5", "-i")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertTrue(ignore)
-        }
-    }
-
-    @Test
-    fun testShouldNotParseGrepIgnore() {
-        val args = arrayOf("lol", "-wA", "5")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertFalse(ignore)
-        }
-    }
-
-    @Test
-    fun testShouldParseGrepAdditionaly() {
-        val args = arrayOf("lol", "-wA", "5", "-i")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertEquals(5, additionally)
-        }
-    }
-
-    @Test
-    fun testShouldParseGrepAdditionalyDefault() {
-        val args = arrayOf("lol", "-wi")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertEquals(0, additionally)
-        }
     }
 }
 
