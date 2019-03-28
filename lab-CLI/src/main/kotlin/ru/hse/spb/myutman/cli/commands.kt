@@ -185,7 +185,8 @@ class BashCommand(private val name: String,
         }
         val code = runtime.waitFor()
         if (code != 0) {
-            throw CLIException("$name: Invalid command");
+            val message = fileContents(runtime.errorStream)
+            throw CLIException(message)
         }
         val commandOutput = runtime.inputStream
         try {
