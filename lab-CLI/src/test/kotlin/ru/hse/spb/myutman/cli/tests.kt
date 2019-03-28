@@ -128,7 +128,7 @@ class CommandTest {
 
     @After
     fun after() {
-        //File(filename).delete()
+        File(filename).delete()
     }
 
     @Test
@@ -262,6 +262,24 @@ class ParserTest {
     fun testShouldParsePipe() {
         val command = "cat $filename | wc".parseCommand(env)
         assertEquals(wcAns, command?.execute())
+    }
+
+    @Test
+    fun testParseInvalidPipe() {
+        try {
+            "echo 12 |".parseCommand(env)
+        } catch (e: CLIException) {
+
+        }
+    }
+
+    @Test
+    fun testParseInvalidQuotes() {
+        try {
+            "echo 12 \"".parseCommand(env)
+        } catch (e: CLIException) {
+
+        }
     }
 }
 

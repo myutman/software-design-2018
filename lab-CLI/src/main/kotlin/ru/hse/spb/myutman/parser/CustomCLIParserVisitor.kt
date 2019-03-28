@@ -42,6 +42,7 @@ class CustomCLIParserVisitor(val env: MutableMap<String, String>) : CLIParserBas
         return {
             // Switch on different situations of command names and use given Command? as pipe
             when (commandName.unquote()) {
+                ""      ->  throw CLIException("error: empty command")
                 "echo"  -> Echo(args)
                 "wc"    -> WC(args, it, env)
                 "cat"   -> Cat(args, it, env)
