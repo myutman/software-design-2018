@@ -32,7 +32,10 @@ class GrepArgs(parser: ArgParser) {
         help = "additionally write n lines after any match"
     ) {
         try {
-            toInt()
+            val a = toInt()
+            if (a < 0)
+                throw CLIException("grep: -A should take a non-negative number")
+            a
         } catch (e: NumberFormatException) {
             throw CLIException("grep: -A should take a number")
         }
