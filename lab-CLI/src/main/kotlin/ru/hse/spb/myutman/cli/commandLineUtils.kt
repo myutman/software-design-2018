@@ -59,7 +59,7 @@ fun String.substitution(dict: Map<String, String>): String {
  * Return String with removed quotes if there are any
  */
 fun String.unquote(): String {
-    return if (this[0] == '\'' || this[0] == '"')
+    return if (!this.isEmpty() && (this[0] == '\'' || this[0] == '"'))
         this.substring(1..length - 2)
     else
         this
@@ -82,5 +82,11 @@ fun String?.parseCommand(env: MutableMap<String, String>): Command? {
 
     // Parses command from AST
     val visitor = CustomCLIParserVisitor(env)
-    return visitor.visit(parser.line())(null)
+    val result: Command?
+    try {
+        result = visitor.visit(parser.line())(null)
+    } catch (e: StringIndexOutOfBoundsException) {
+        throw CLIException("error: unexpected end of line")
+    }
+    return result
 }
