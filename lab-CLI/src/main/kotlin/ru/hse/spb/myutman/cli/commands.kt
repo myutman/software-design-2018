@@ -2,6 +2,7 @@ package ru.hse.spb.myutman.cli
 
 import com.xenomachina.argparser.ArgParser
 import com.xenomachina.argparser.MissingRequiredPositionalArgumentException
+import com.xenomachina.argparser.UnrecognizedOptionException
 
 import java.io.*
 
@@ -140,20 +141,25 @@ class Pwd(dict: Map<String, String>) : Command(dict = dict) {
 }
 
 /**
- * Use: grep PATTERN [-i] [-w] [-A n]
+ * Use: grep PATTERN [-i] [-w] [-A n] [FILENAME ...]
  * Command that prints all lines that match PATTERN
  * -i: ignore letter case
  * -w: match whole words
  * -A n: additionally write n lines after any match
+ * FILENAME: additionally use lines from file with given name
  */
 class Grep(args: Array<String> = emptyArray(),
            pipe: Command? = null):
     Command(args, pipe) {
 
     override fun execute(): String {
-        val lines = (pipe ?. execute() ?: fileContents(System.`in`)).split(System.lineSeparator())
         try {
             return ArgParser(args).parseInto(::GrepArgs).run {
+                val lines = (
+                        if (!fileName.isEmpty()) fileContents(fileName, dict)
+                        else (pipe?.execute() ?: fileContents(System.`in`))
+                    ).split(System.lineSeparator())
+
                 val flags = if (ignore) Pattern.CASE_INSENSITIVE else 0
                 val pat = if (word) {
                     ".*\\b$pattern\\b.*"
@@ -176,6 +182,8 @@ class Grep(args: Array<String> = emptyArray(),
                 list.joinToString(System.lineSeparator())
             }
         } catch (e: MissingRequiredPositionalArgumentException) {
+            throw CLIException("grep: ${e.message}")
+        } catch (e: UnrecognizedOptionException) {
             throw CLIException("grep: ${e.message}")
         } catch (e: IOException) {
             throw CLIException("grep: ${e.message}")

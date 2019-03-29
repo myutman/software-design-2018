@@ -187,10 +187,10 @@ class CommandTest {
     fun testShouldMatchWithoutArgs() {
         setInput("""|lol
             |lollipop
-            |Lol""".trimMargin())
+            |Lol""".trimMargin().replace("\n", System.lineSeparator()))
         val grep = Grep(arrayOf("lol"))
         assertEquals("""|lol
-            |lollipop""".trimMargin(), grep.execute())
+            |lollipop""".trimMargin().replace("\n", System.lineSeparator()), grep.execute())
     }
 
     @Test
@@ -206,11 +206,11 @@ class CommandTest {
     fun testShouldMatchIgnoringCase() {
         setInput("""|lol
             |lollipop
-            |Lol""".trimMargin())
+            |Lol""".trimMargin().replace("\n", System.lineSeparator()))
         val grep = Grep(arrayOf("lol", "-i"))
         assertEquals("""|lol
             |lollipop
-            |Lol""".trimMargin(), grep.execute())
+            |Lol""".trimMargin().replace("\n", System.lineSeparator()), grep.execute())
     }
 
     @Test
@@ -218,11 +218,11 @@ class CommandTest {
         setInput("""|lol
             |kek
             |lollipop
-            |Lol""".trimMargin())
+            |Lol""".trimMargin().replace("\n", System.lineSeparator()))
         val grep = Grep(arrayOf("lol", "-wiA", "1"))
         assertEquals("""|lol
             |kek
-            |Lol""".trimMargin(), grep.execute())
+            |Lol""".trimMargin().replace("\n", System.lineSeparator()), grep.execute())
     }
 
     @Test
@@ -234,11 +234,36 @@ class CommandTest {
             |13.
             |thirteenth
             |
-        """.trimMargin())
+        """.trimMargin().replace("\n", System.lineSeparator()))
         val grep = Grep(arrayOf("[0-9]+\\."))
         assertEquals("""|1. first
             |2. second
-            |13.""".trimMargin(), grep.execute())
+            |13.""".trimMargin().replace("\n", System.lineSeparator()), grep.execute())
+    }
+
+    @Test
+    fun testShouldSupportWords() {
+        setInput("hello, world!")
+        val grep = Grep(arrayOf("hello", "-w"))
+        assertEquals("hello, world!", grep.execute())
+    }
+
+    @Test
+    fun testShouldCheckIllegalArgument() {
+        setInput("hello, world!")
+        val grep = Grep(arrayOf("hello", "-q"))
+        try {
+            grep.execute()
+        } catch (e: CLIException) { }
+    }
+
+    @Test
+    fun testShouldCheckIllegalArgumentType() {
+        setInput("hello, world!")
+        val grep = Grep(arrayOf("hello", "-A lol"))
+        try {
+            grep.execute()
+        } catch (e: CLIException) { }
     }
 }
 
@@ -344,26 +369,25 @@ class ParserTest {
 
     @Test
     fun testShouldParseCatPipeGrep() {
-        val command = "cat ./src/test/resources/test | grep na -A 1".parseCommand(env)
-        assertEquals("""|mama anarhia
-            |
-            |stakan portveina""".trimMargin(), command?.execute())
+        val command = "cat $filename | grep na -A 1".parseCommand(env)
+        assertEquals("mama anarhia" + System.lineSeparator() +
+            "" + System.lineSeparator() +
+            "stakan portveina", command?.execute())
     }
 
     @Test
     fun testShouldSupportParsingRegex() {
-        setInput("""|1. first
-            |still first
-            |
-            |2. second
-            |13.
-            |thirteenth
-            |
-        """.trimMargin())
+        setInput("1. first" + System.lineSeparator() +
+            "still first" + System.lineSeparator() +
+            "" + System.lineSeparator() +
+            "2. second" + System.lineSeparator() +
+            "13." + System.lineSeparator() +
+            "thirteenth" + System.lineSeparator() +
+            "")
         val grep = "grep \"[0-9]+\\.\"".parseCommand(env)
-        assertEquals("""|1. first
-            |2. second
-            |13.""".trimMargin(), grep?.execute())
+        assertEquals("1. first" + System.lineSeparator() +
+            "2. second" + System.lineSeparator() +
+            "13.", grep?.execute())
     }
 
     @Test
