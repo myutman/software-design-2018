@@ -14,6 +14,6 @@ message MessageResponse {
 
 
 service MessageSender {
-    rpc GetVersion (Message) returns (MessageResponse) {
+    rpc send (Message) returns (MessageResponse) {
     }
 }

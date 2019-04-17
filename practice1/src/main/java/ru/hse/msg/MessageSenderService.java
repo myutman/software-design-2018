@@ -1,4 +1,10 @@
 package ru.hse.msg;
 
-public class MessageSenderService extends MessageSenderBase {
+import io.grpc.stub.StreamObserver;
+
+public class MessageSenderService extends MessageSenderGrpc.MessageSenderImplBase {
+    @Override
+    public void send(MsgProto.Message request, StreamObserver<MsgProto.MessageResponse> responseObserver) {
+        
+    }
 }
