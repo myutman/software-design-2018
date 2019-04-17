@@ -7,3 +7,13 @@ message Message {
     string userName = 1;
     string messageText = 2;
 }
+
+message MessageResponse {
+
+}
+
+
+service MessageSender {
+    rpc GetVersion (Message) returns (MessageResponse) {
+    }
+}
