@@ -3,9 +3,7 @@ package ru.hse.spb.myutman.cli
 import com.xenomachina.argparser.ArgParser
 import com.xenomachina.argparser.MissingRequiredPositionalArgumentException
 import com.xenomachina.argparser.UnrecognizedOptionException
-
 import java.io.*
-
 import java.util.regex.Pattern
 import kotlin.system.exitProcess
 

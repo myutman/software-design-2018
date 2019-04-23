@@ -421,30 +421,6 @@ class ParserTest {
             assertTrue(ignore)
         }
     }
-
-    @Test
-    fun testShouldNotParseGrepIgnore() {
-        val args = arrayOf("lol", "-wA", "5")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertFalse(ignore)
-        }
-    }
-
-    @Test
-    fun testShouldParseGrepAdditionaly() {
-        val args = arrayOf("lol", "-wA", "5", "-i")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertEquals(5, additionally)
-        }
-    }
-
-    @Test
-    fun testShouldParseGrepAdditionalyDefault() {
-        val args = arrayOf("lol", "-wi")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertEquals(0, additionally)
-        }
-    }
 }
 
 class ParserSubstitutionIntegration {
