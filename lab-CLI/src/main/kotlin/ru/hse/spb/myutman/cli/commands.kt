@@ -2,9 +2,10 @@ package ru.hse.spb.myutman.cli
 
 import com.xenomachina.argparser.ArgParser
 import com.xenomachina.argparser.MissingRequiredPositionalArgumentException
-
+import com.xenomachina.argparser.UnrecognizedOptionException
 import java.io.*
 import java.nio.file.Paths
+
 
 import java.util.regex.Pattern
 import kotlin.system.exitProcess
@@ -134,7 +135,57 @@ class Pwd(dict: Map<String, String>) : Command(dict = dict) {
     override fun execute(): String {
         return dict["PWD"]!!
     }
+}
 
+/**
+ * Use: grep PATTERN [-i] [-w] [-A n] [FILENAME ...]
+ * Command that prints all lines that match PATTERN
+ * -i: ignore letter case
+ * -w: match whole words
+ * -A n: additionally write n lines after any match
+ * FILENAME: additionally use lines from file with given name
+ */
+class Grep(args: Array<String> = emptyArray(),
+           pipe: Command? = null):
+    Command(args, pipe) {
+
+    override fun execute(): String {
+        try {
+            return ArgParser(args).parseInto(::GrepArgs).run {
+                val lines = (
+                        if (!fileName.isEmpty()) fileContents(fileName, dict)
+                        else (pipe?.execute() ?: fileContents(System.`in`))
+                    ).split(System.lineSeparator())
+
+                val flags = if (ignore) Pattern.CASE_INSENSITIVE else 0
+                val pat = if (word) {
+                    ".*\\b$pattern\\b.*"
+                } else {
+                    ".*$pattern.*"
+                }
+                val regex = Pattern.compile(pat, flags).toRegex()
+
+                val list = ArrayList<String>()
+                var left = 0
+                for (line in lines) {
+                    if (line.matches(regex)) {
+                        list.add(line)
+                        left = additionally
+                    } else if (left > 0) {
+                        list.add(line)
+                        left--
+                    }
+                }
+                list.joinToString(System.lineSeparator())
+            }
+        } catch (e: MissingRequiredPositionalArgumentException) {
+            throw CLIException("grep: ${e.message}")
+        } catch (e: UnrecognizedOptionException) {
+            throw CLIException("grep: ${e.message}")
+        } catch (e: IOException) {
+            throw CLIException("grep: ${e.message}")
+        }
+    }
 }
 
 /**
@@ -288,9 +339,19 @@ class BashCommand(private val name: String,
     : Command(args, null, env) {
 
     override fun execute(): String {
-        val runtime = Runtime.getRuntime().exec(buildString {
-            append(name + " " + args.joinToString(" "))
-        }, emptyArray(), File(dict["PWD"]))
+        val runtime: Process
+        try {
+            runtime = Runtime.getRuntime().exec(buildString {
+                append(name + " " + args.joinToString(" "))
+            })
+        } catch (e: IOException) {
+            throw CLIException("$name: ${e.message}")
+        }
+        val code = runtime.waitFor()
+        if (code != 0) {
+            val message = fileContents(runtime.errorStream)
+            throw CLIException(message)
+        }
         val commandOutput = runtime.inputStream
         try {
             val res = fileContents(commandOutput)
