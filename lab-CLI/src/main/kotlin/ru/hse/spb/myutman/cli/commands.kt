@@ -4,6 +4,7 @@ import com.xenomachina.argparser.ArgParser
 import com.xenomachina.argparser.MissingRequiredPositionalArgumentException
 import com.xenomachina.argparser.UnrecognizedOptionException
 import java.io.*
+import java.nio.file.Paths
 import java.util.regex.Pattern
 import kotlin.system.exitProcess
 
@@ -24,25 +25,21 @@ abstract class Command(protected val args: Array<String> = emptyArray(),
      * Execute CLI command.
      */
     @Throws(CLIException::class)
-    abstract fun execute() : String
+    abstract fun execute(): String
 }
 
 /**
  * Command that prints its arguments.
  */
 class Echo(args: Array<String> = emptyArray()) : Command(args) {
-    override fun execute() : String {
+    override fun execute(): String {
         return args.joinToString(" ")
     }
 }
 
 private fun fileContents(fileName: String, dict: Map<String, String>): String {
-    val fileInputStream = FileInputStream(
-        File(dict["PWD"])
-        .toPath()
-        .resolve(fileName)
-        .toFile()
-    )
+    val file = File(getFullPath(fileName, dict))
+    val fileInputStream = FileInputStream(file)
     return fileContents(fileInputStream)
 }
 
@@ -92,7 +89,7 @@ class WC(args: Array<String> = emptyArray(),
             return "\t$lines\t$words\t$chars"
         }
 
-        operator fun plus (other: Result): Result {
+        operator fun plus(other: Result): Result {
             return Result(chars + other.chars, words + other.words, lines + other.lines)
         }
     }
@@ -119,7 +116,7 @@ class WC(args: Array<String> = emptyArray(),
                     for ((name, res) in args.zip(results)) {
                         append(res, "\t", name, System.lineSeparator())
                     }
-                    append(results.reduce { acc, result ->  acc + result}, "\ttotal")
+                    append(results.reduce { acc, result -> acc + result }, "\ttotal")
                 }
             } catch (e: IOException) {
                 throw CLIException("wc: ${e.message}")
@@ -211,10 +208,80 @@ class Assignation(private val name: String,
     : Command(dict = env) {
 
     override fun execute(): String {
-        if (!name.equals("PWD")) {
+        if (name != "PWD") {
             env[name] = value
+        } else {
+            throw CLIException("You can't change PWD variable value")
         }
         return ""
+    }
+}
+
+
+class Ls(args: Array<String> = emptyArray(), pipe: Command? = null, dict: Map<String, String> = defaultMap) :
+    Command(args, pipe, dict) {
+    override fun execute(): String {
+        return if (args.isEmpty()) {
+            try {
+                val res = pipe?.execute() ?: ""
+                val path = if (res == "") {
+                    dict["PWD"] ?: "."
+                } else {
+                    res
+                }
+                lsDir(getFullPath(path, dict))
+            } catch (e: IOException) {
+                throw CLIException("ls: ${e.message}")
+            }
+        } else {
+            try {
+                if (args.size == 1) {
+                    return lsDir(getFullPath(args[0], dict))
+                }
+                val stringBuilder = StringBuilder()
+                for (arg in args) {
+                    stringBuilder.append(" $arg:${System.lineSeparator()}${lsDir(getFullPath(arg, dict))}")
+                }
+                stringBuilder.toString()
+            } catch (e: IOException) {
+                throw CLIException("ls: ${e.message}")
+            }
+        }
+    }
+
+    private fun lsDir(dirName: String): String {
+        val dir = File(dirName)
+        if (dir.exists() && dir.isDirectory) {
+            val stringBuilder = StringBuilder()
+            for (file in dir.listFiles()) {
+                if (file.isDirectory) {
+                    stringBuilder.append("dir: ${file.name}${System.lineSeparator()}")
+                } else {
+                    stringBuilder.append("file: ${file.name}${System.lineSeparator()}")
+                }
+            }
+            return stringBuilder.toString()
+        } else {
+            throw CLIException("ls: There is no such directory")
+        }
+    }
+}
+
+class Cd(args: Array<String> = emptyArray(), private val env: MutableMap<String, String> = mutableMapOf()) :
+    Command(args, null, env) {
+    override fun execute(): String {
+        if (args.size > 1) {
+            throw CLIException("cd: More than 1 argument given")
+        }
+        val dir = if (args.isEmpty()) System.getProperty("user.home") else args[0]
+        val newPwd = getFullPath(dir, env)
+        val file = File(newPwd)
+        if (file.exists() && file.isDirectory) {
+            env["PWD"] = newPwd
+            return ""
+        } else {
+            throw CLIException("cd: There is no such directory")
+        }
     }
 }
 
@@ -225,8 +292,8 @@ class Assignation(private val name: String,
  */
 class BashCommand(private val name: String,
                   args: Array<String>,
-                  pipe: Command?)
-    : Command(args, pipe) {
+                  env: MutableMap<String, String>)
+    : Command(args, null, env) {
 
     override fun execute(): String {
         val runtime: Process
@@ -250,4 +317,8 @@ class BashCommand(private val name: String,
             throw CLIException("$name: ${e.message}")
         }
     }
+}
+
+fun getFullPath(fileName: String, env: Map<String, String>): String {
+    return Paths.get(env["PWD"]).resolve(fileName).normalize().toString()
 }

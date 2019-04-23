@@ -29,12 +29,12 @@ val wcTotal = wcAns + "\t" + filename + System.lineSeparator() +
 
 class SubstitutionTests {
 
-    val env = HashMap<String, String>()
+    private val env = HashMap<String, String>()
 
     @Before
     fun before() {
         env.clear()
-        env["PWD"] = "."
+        env["PWD"] = File("").absolutePath
         val file = File(filename)
         File(file.parent).mkdirs()
         val writer = PrintWriter(file)
@@ -114,12 +114,14 @@ class SubstitutionTests {
 
 class CommandTest {
 
-    val env = HashMap<String, String>()
+    private val env = HashMap<String, String>()
+    private val testDir = "${File.separator}src${File.separator}test"
+    private val testFile = "src${File.separator}test${File.separator}resources${File.separator}test"
 
     @Before
     fun before() {
         env.clear()
-        env["PWD"] = "."
+        env["PWD"] = File("").absolutePath
         val file = File(filename)
         File(file.parent).mkdirs()
         val writer = PrintWriter(file)
@@ -155,6 +157,115 @@ class CommandTest {
     fun testShouldWorkCatWithArgs() {
         val cat = Cat(arrayOf(filename, filename))
         assertEquals(stringInFile + System.lineSeparator() + stringInFile, cat.execute())
+    }
+
+    @Test
+    fun testShouldWorkLsWithOneArg() {
+        val ls = Ls(arrayOf(".$testDir"), null, env)
+        assertEquals("""dir: resources
+                |dir: kotlin
+                |""".trimMargin(), ls.execute())
+    }
+
+    @Test
+    fun testShouldWorkLsWithPipe() {
+        val ls = Ls(emptyArray(), Echo(arrayOf(".$testDir")), env)
+        assertEquals("""dir: resources
+                |dir: kotlin
+                |""".trimMargin(), ls.execute())
+    }
+
+    @Test
+    fun testShouldWorkLsWithArgs() {
+        val ls = Ls(arrayOf(".$testDir", ".$testDir${File.separator}resources"), null, env)
+        assertEquals(""" .${File.separator}src${File.separator}test:
+                |dir: resources
+                |dir: kotlin
+                | .${File.separator}src${File.separator}test${File.separator}resources:
+                |file: test
+                |""".trimMargin(), ls.execute())
+    }
+
+
+    @Test
+    fun testCdPoint() {
+        val root = env["PWD"]
+        val cd = Cd(arrayOf(".$testDir"), env)
+        assertEquals("", cd.execute())
+        assertEquals("$root$testDir", env["PWD"])
+    }
+
+    @Test
+    fun testCdStrange() {
+        val root = env["PWD"]
+        val cd = Cd(arrayOf(".$testDir${File.separator}..${File.separator}.."), env)
+        assertEquals("", cd.execute())
+        assertEquals(root, env["PWD"])
+    }
+
+    @Test
+    fun testCdJustPoint() {
+        val root = env["PWD"]
+        val cd = Cd(arrayOf("."), env)
+        assertEquals("", cd.execute())
+        assertEquals(root, env["PWD"])
+    }
+
+    @Test
+    fun testCdBack() {
+        val root = env["PWD"]
+        Cd(arrayOf(".$testDir"), env).execute()
+        val cd = Cd(arrayOf(".."), env)
+        assertEquals("", cd.execute())
+        assertEquals("$root${File.separator}src", env["PWD"])
+    }
+
+    @Test
+    fun testCdSlash() {
+        val root = env["PWD"]
+        val cd = Cd(arrayOf("$root$testDir"), env)
+        assertEquals("", cd.execute())
+        assertEquals("$root$testDir", env["PWD"])
+    }
+
+    @Test
+    fun testCdEmpty() {
+        val cd = Cd(emptyArray(), env)
+        assertEquals("", cd.execute())
+        assertEquals(System.getProperty("user.home"), env["PWD"])
+    }
+
+    @Test
+    fun testCdWord() {
+        val root = env["PWD"]
+        val cd = Cd(arrayOf("src${File.separator}test"), env)
+        assertEquals("", cd.execute())
+        assertEquals("$root$testDir", env["PWD"])
+    }
+
+    @Test
+    fun testCdLs() {
+        val root = env["PWD"]
+        val cd = Cd(arrayOf("src${File.separator}test"), env)
+        assertEquals("", cd.execute())
+        assertEquals("$root$testDir", env["PWD"])
+        val ls = Ls(emptyArray(), null, env)
+        assertEquals("""dir: resources
+                |dir: kotlin
+                |""".trimMargin(), ls.execute())
+    }
+
+    @Test
+    fun testCdCat() {
+        val root = env["PWD"]
+        val cd = Cd(arrayOf("src${File.separator}test"), env)
+        assertEquals("", cd.execute())
+        assertEquals("$root$testDir", env["PWD"])
+        val cat = Cat(arrayOf("resources${File.separator}test"), null, env)
+        assertEquals("""mama anarhia
+                |
+                |papa
+                |stakan portveina""".trimMargin(), cat.execute())
     }
 
     @Test
@@ -270,7 +381,8 @@ class CommandTest {
 
 class ParserTest {
 
-    val env = HashMap<String, String>()
+    private val env = HashMap<String, String>()
+    private val testFile = "src${File.separator}test${File.separator}resources${File.separator}test"
 
     @Before
     fun before() {
@@ -296,12 +408,12 @@ class ParserTest {
                 append(token.text, " ", token.startIndex, " ", token.stopIndex, " ", when(token.type) {
                     Subst.SUBST -> "SUBST"
                     else -> "QUOTE"
-                }, "\n")
+                }, System.lineSeparator())
             }
         }
-        val expected = "\$hello 0 5 SUBST\n" +
-                "'\$hello hell\$o' 6 20 QUOTE\n" +
-                "\$o 26 27 SUBST\n"
+        val expected = "\$hello 0 5 SUBST${System.lineSeparator()}" +
+                "'\$hello hell\$o' 6 20 QUOTE${System.lineSeparator()}" +
+                "\$o 26 27 SUBST${System.lineSeparator()}"
         assertEquals(expected, actual)
     }
 
@@ -369,25 +481,26 @@ class ParserTest {
 
     @Test
     fun testShouldParseCatPipeGrep() {
-        val command = "cat $filename | grep na -A 1".parseCommand(env)
-        assertEquals("mama anarhia" + System.lineSeparator() +
-            "" + System.lineSeparator() +
-            "stakan portveina", command?.execute())
+        val command = "cat $testFile | grep na -A 1".parseCommand(env)
+        assertEquals("""|mama anarhia
+            |
+            |stakan portveina""".trimMargin(), command?.execute())
     }
 
     @Test
     fun testShouldSupportParsingRegex() {
-        setInput("1. first" + System.lineSeparator() +
-            "still first" + System.lineSeparator() +
-            "" + System.lineSeparator() +
-            "2. second" + System.lineSeparator() +
-            "13." + System.lineSeparator() +
-            "thirteenth" + System.lineSeparator() +
-            "")
+        setInput("""|1. first
+            |still first
+            |
+            |2. second
+            |13.
+            |thirteenth
+            |
+        """.trimMargin())
         val grep = "grep \"[0-9]+\\.\"".parseCommand(env)
-        assertEquals("1. first" + System.lineSeparator() +
-            "2. second" + System.lineSeparator() +
-            "13.", grep?.execute())
+        assertEquals("""|1. first
+            |2. second
+            |13.""".trimMargin(), grep?.execute())
     }
 
     @Test
@@ -421,6 +534,30 @@ class ParserTest {
             assertTrue(ignore)
         }
     }
+
+    @Test
+    fun testShouldNotParseGrepIgnore() {
+        val args = arrayOf("lol", "-wA", "5")
+        ArgParser(args).parseInto(::GrepArgs).run {
+            assertFalse(ignore)
+        }
+    }
+
+    @Test
+    fun testShouldParseGrepAdditionaly() {
+        val args = arrayOf("lol", "-wA", "5", "-i")
+        ArgParser(args).parseInto(::GrepArgs).run {
+            assertEquals(5, additionally)
+        }
+    }
+
+    @Test
+    fun testShouldParseGrepAdditionalyDefault() {
+        val args = arrayOf("lol", "-wi")
+        ArgParser(args).parseInto(::GrepArgs).run {
+            assertEquals(0, additionally)
+        }
+    }
 }
 
 class ParserSubstitutionIntegration {
@@ -430,7 +567,7 @@ class ParserSubstitutionIntegration {
     @Before
     fun before() {
         env.clear()
-        env["PWD"] = "."
+        env["PWD"] = File("").absolutePath
     }
 
     @Test
