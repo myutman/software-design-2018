@@ -1,5 +1,6 @@
 package ru.hse.spb.myutman.cli
 
+import com.xenomachina.argparser.ArgParser
 import org.antlr.v4.runtime.CharStreams
 import org.junit.After
 import org.junit.Assert.*
@@ -418,15 +419,6 @@ class ParserTest {
         val args = arrayOf("lol", "-wA", "5", "-i")
         ArgParser(args).parseInto(::GrepArgs).run {
             assertTrue(ignore)
-        }
-    }
-
-    @Test
-    fun testParseInvalidQuotes() {
-        try {
-            "echo 12 \"".parseCommand(env)
-        } catch (e: CLIException) {
-
         }
     }
 }
