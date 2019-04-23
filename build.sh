@@ -1,5 +1,5 @@
 for lab in $(ls | grep "lab"); do
   cd $lab
-  ./gradlew build
+  ./gradlew test
   cd ..
 done

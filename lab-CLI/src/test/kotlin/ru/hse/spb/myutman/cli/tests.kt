@@ -162,16 +162,16 @@ class CommandTest {
     @Test
     fun testShouldWorkLsWithOneArg() {
         val ls = Ls(arrayOf(".$testDir"), null, env)
-        assertEquals("""dir: kotlin
-                |dir: resources
+        assertEquals("""dir: resources
+                |dir: kotlin
                 |""".trimMargin(), ls.execute())
     }
 
     @Test
     fun testShouldWorkLsWithPipe() {
         val ls = Ls(emptyArray(), Echo(arrayOf(".$testDir")), env)
-        assertEquals("""dir: kotlin
-                |dir: resources
+        assertEquals("""dir: resources
+                |dir: kotlin
                 |""".trimMargin(), ls.execute())
     }
 
@@ -179,8 +179,8 @@ class CommandTest {
     fun testShouldWorkLsWithArgs() {
         val ls = Ls(arrayOf(".$testDir", ".$testDir${File.separator}resources"), null, env)
         assertEquals(""" .${File.separator}src${File.separator}test:
-                |dir: kotlin
                 |dir: resources
+                |dir: kotlin
                 | .${File.separator}src${File.separator}test${File.separator}resources:
                 |file: test
                 |""".trimMargin(), ls.execute())
@@ -250,8 +250,8 @@ class CommandTest {
         assertEquals("", cd.execute())
         assertEquals("$root$testDir", env["PWD"])
         val ls = Ls(emptyArray(), null, env)
-        assertEquals("""dir: kotlin
-                |dir: resources
+        assertEquals("""dir: resources
+                |dir: kotlin
                 |""".trimMargin(), ls.execute())
     }
 
@@ -476,85 +476,6 @@ class ParserTest {
             "echo 12 \"".parseCommand(env)
         } catch (e: CLIException) {
 
-        }
-    }
-
-    @Test
-    fun testShouldParseCatPipeGrep() {
-        val command = "cat $filename | grep na -A 1".parseCommand(env)
-        assertEquals("mama anarhia" + System.lineSeparator() +
-            "" + System.lineSeparator() +
-            "stakan portveina", command?.execute())
-    }
-
-    @Test
-    fun testShouldSupportParsingRegex() {
-        setInput("1. first" + System.lineSeparator() +
-            "still first" + System.lineSeparator() +
-            "" + System.lineSeparator() +
-            "2. second" + System.lineSeparator() +
-            "13." + System.lineSeparator() +
-            "thirteenth" + System.lineSeparator() +
-            "")
-        val grep = "grep \"[0-9]+\\.\"".parseCommand(env)
-        assertEquals("1. first" + System.lineSeparator() +
-            "2. second" + System.lineSeparator() +
-            "13.", grep?.execute())
-    }
-
-    @Test
-    fun testShouldParseGrepPattern() {
-        val args = arrayOf("lol", "-wA", "5", "-i")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertEquals("lol", pattern)
-        }
-    }
-
-    @Test
-    fun testShouldParseGrepWord() {
-        val args = arrayOf("lol", "-wA", "5", "-i")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertTrue(word)
-        }
-    }
-
-    @Test
-    fun testShouldNotParseGrepWord() {
-        val args = arrayOf("lol", "-A", "5", "-i")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertFalse(word)
-        }
-    }
-
-    @Test
-    fun testShouldParseGrepIgnore() {
-        val args = arrayOf("lol", "-wA", "5", "-i")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertTrue(ignore)
-        }
-    }
-
-    @Test
-    fun testShouldNotParseGrepIgnore() {
-        val args = arrayOf("lol", "-wA", "5")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertFalse(ignore)
-        }
-    }
-
-    @Test
-    fun testShouldParseGrepAdditionaly() {
-        val args = arrayOf("lol", "-wA", "5", "-i")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertEquals(5, additionally)
-        }
-    }
-
-    @Test
-    fun testShouldParseGrepAdditionalyDefault() {
-        val args = arrayOf("lol", "-wi")
-        ArgParser(args).parseInto(::GrepArgs).run {
-            assertEquals(0, additionally)
         }
     }
 
