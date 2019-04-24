@@ -27,6 +27,7 @@ dependencies {
     compile 'io.grpc:grpc-netty-shaded:1.20.0'
     compile 'io.grpc:grpc-protobuf:1.20.0'
     compile 'io.grpc:grpc-stub:1.20.0'
+    compile group: 'com.rabbitmq', name: 'amqp-client', version: '5.7.0'
 }
 
 protobuf {
