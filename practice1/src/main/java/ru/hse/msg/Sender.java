@@ -1,24 +1,45 @@
 package ru.hse.msg;
 
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.*;
 
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
 public class Sender {
-    private static final String QUEUE_NAME = "MyQueue";
-    public static void main(String[] args) throws IOException, TimeoutException {
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost("localhost");
-        Connection connection = factory.newConnection();
-        Channel channel = connection.createChannel();
-        channel.queueDeclare(QUEUE_NAME, false, false, false, null);
-        String message = "Hello World!";
-        channel.basicPublish("", QUEUE_NAME, null, message.getBytes());
-        System.out.println(" [x] Sent '" + message + "'");
-        channel.close();
-        connection.close();
-    }
+
+  ConnectionFactory factory = new ConnectionFactory();
+  Connection connection;
+  Channel channel;
+
+  public Sender() throws IOException, TimeoutException {
+    factory.setHost("localhost");
+    connection = factory.newConnection();
+    channel = connection.createChannel();
+  }
+
+  public void joinChannel(String channelName) throws IOException {
+    channel.queueDeclare(channelName, false, false, false, null);
+    Consumer consumer = new DefaultConsumer(channel) {
+      @Override
+      public void handleDelivery(String consumerTag, Envelope envelope,
+                                 AMQP.BasicProperties properties, byte[] body)
+          throws IOException {
+        MsgProto.Message message = MsgProto.Message.parseFrom(body);
+        
+      }
+    };
+    channel.basicConsume(channelName, true, consumer);
+  }
+
+  public void writeMessage(String message, String userName, String channelName) throws IOException {
+    channel.basicPublish("", channelName, null, MsgProto.Message.newBuilder()
+        .setMessageText(message)
+        .setUserName(userName)
+        .build().toByteArray());
+  }
+
+  public void close() throws IOException, TimeoutException {
+    channel.close();
+    connection.close();
+  }
 }
