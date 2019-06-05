@@ -14,3 +14,17 @@ services:
       - localstack
     links:
       - localstack
+  increase_A_B:
+    build: .
+    command: ["python3", "increase.py", "A", "B"]
+    depends_on:
+      - init_queues
+    links:
+      - localstack
+  increase_B_A:
+    build: .
+    command: ["python3", "increase.py", "B", "A"]
+    depends_on:
+      - init_queues
+    links:
+      - localstack
