@@ -4,7 +4,7 @@ import time
 def create_queue(sqs, name):
     while True:
         try:
-            queue = sqs.create_queue(QueueName="lol")
+            queue = sqs.create_queue(QueueName=name)
         except:
             time.sleep(0.288)
             continue
