@@ -13,12 +13,22 @@ def get_sqs():
 def get_queue(sqs, name):
     while True:
         try:
+            print("try to get queue ", name, flush=True)
             queue = sqs.get_queue_by_name(QueueName=name)
+            return queue
+        except:
+            time.sleep(1)
+        try:
+            print("try to create queue ", name, flush=True)
+            queue = sqs.create_queue(QueueName=name)
+            if name == "A":
+                queue.send_message(MessageBody="1")
             return queue
         except:
             time.sleep(1)
 
 if __name__ == "__main__":
+    print("It's alive", flush=True)
     queue_a_name = sys.argv[1]
     queue_b_name = sys.argv[2]
 
