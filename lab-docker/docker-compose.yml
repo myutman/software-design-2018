@@ -1,0 +1,23 @@
+version: '3.3'
+
+services:
+  localstack:
+    image: localstack/localstack:0.9.4
+    ports:
+      - "4576:4576"
+    environment:
+      - SERVICES=sqs
+  increase_a_b:
+    build: .
+    command: ["python3", "increase.py", "A", "B"]
+    depends_on:
+      - localstack
+    links:
+      - localstack
+  increase_b_a:
+    build: .
+    command: ["python3", "increase.py", "B", "A"]
+    depends_on:
+      - localstack
+    links:
+      - localstack
